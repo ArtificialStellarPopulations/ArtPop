@@ -285,7 +285,7 @@ class ArtObservatory(object):
         sky_counts = self.sb_to_counts(mu_sky, band, exptime, downsample)
         raw_counts = self.rng.poisson(src_counts + sky_counts)
         raw_counts = raw_counts + self.rng.normal(scale=self.read_noise, 
-                                                  size=src_counts.shape).T
+                                                  size=src_counts.shape)
         cali_factor = self.cali_factor(band, exptime, zpt)
         flux_cali = (raw_counts - sky_counts) * cali_factor
         noise = np.sqrt(raw_counts + self.read_noise**2)
