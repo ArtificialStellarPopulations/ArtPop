@@ -6,10 +6,9 @@ project_dir = os.path.dirname(os.path.dirname(__file__))
 package_dir = os.path.join(project_dir, 'artpop')
 data_dir = os.path.join(package_dir, 'data')
 
-from .isochrones import *
-from .imf import *
-from .spatial_distribution import *
-from .read_mist_models import *
-from .stellar_pops import *
-from .observatory import *
-from .filter_info import *
+from . import stars
+from . import space
+from . import image 
+from .space import *
+from .stars import *
+from .source import *

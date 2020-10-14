@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
-from .utils import check_random_state
+from ..utils import check_random_state
 
 
 __all__ = ['broken_power_law', 'broken_power_law_normed', 'salpeter', 

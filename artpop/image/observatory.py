@@ -8,10 +8,10 @@ from astropy.stats import gaussian_fwhm_to_sigma
 from astropy.convolution import convolve_fft, Gaussian2DKernel, Moffat2DKernel
 from fast_histogram import histogram2d
 from astropy.nddata.utils import block_reduce
-from .utils import check_random_state, fetch_psf
+from ..utils import check_random_state, fetch_psf
+from ..log import logger
+from .. import data_dir
 from .filter_info import *
-from .log import logger
-from . import data_dir
 filter_dir = os.path.join(data_dir, 'filters')
 
 __all__ = ['filter_dir', 'ArtPSF', 'FilterSystem', 

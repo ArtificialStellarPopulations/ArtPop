@@ -1,10 +1,10 @@
 import os
 import numpy as np
-from scipy.special import logsumexp
+from astropy import units as u
 from . import data_dir
 
 
-__all__ = ['fetch_psf', 'check_random_state']
+__all__ = ['fetch_psf', 'check_random_state', 'check_units']
 
 
 psf_dir = os.path.join(data_dir, 'psfs')
@@ -76,3 +76,16 @@ def check_random_state(seed):
 
     raise ValueError('{0!r} cannot be used to seed a numpy.random.RandomState'
                      ' instance'.format(seed))
+
+
+def check_units(value, default_unit):
+    t = type(default_unit)
+    if type(value) == u.Quantity:
+        quantity = value
+    elif (t == u.IrreducibleUnit) or (t == u.Unit):
+        quantity = value * default_unit
+    elif t == str:
+        quantity = value * getattr(u, default_unit)
+    else:
+        raise Exception('default_unit must be an astropy unit or string')
+    return quantity
