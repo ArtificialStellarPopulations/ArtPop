@@ -1,21 +1,15 @@
 import numpy as np
 from astropy import units as u
 from astropy.modeling.models import Sersic2D
-from ..utils import check_random_state, check_units
+from ..utils import check_random_state, check_units, check_xy_dim
 from ..log import logger
+
 
 __all__ = ['xy_from_grid', 'sersic_xy', 'plummer_xy']
 
 
-def _check_xy_dim(xy_dim):
-    if type(xy_dim) == int:
-        xy_dim = [xy_dim, xy_dim]
-    xy_dim = np.asarray(xy_dim)
-    assert np.all(xy_dim % 2 != 0), 'dimensions must be odd'
-    return xy_dim
-
-
-def xy_from_grid(num_stars, model, xy_dim, sample_side=None, random_state=None):
+def xy_from_grid(num_stars, model, xy_dim, sample_side=None,
+                 random_state=None):
 
     if sample_side is None:
         sample_side = max(xy_dim)
@@ -58,12 +52,15 @@ def xy_from_grid(num_stars, model, xy_dim, sample_side=None, random_state=None):
 def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim, 
               pixel_scale=0.2, num_r_eff=10, random_state=None):
 
-    xy_dim = _check_xy_dim(xy_dim)
+    xy_dim = check_xy_dim(xy_dim)
+
     r_eff = check_units(r_eff, 'kpc').to('Mpc').value
     theta = check_units(theta, 'deg').to('radian').value
     distance = check_units(distance, 'Mpc').value
+    pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
-    r_pix = np.arctan2(r_eff, distance) * u.radian.to('arcsec') / pixel_scale
+    r_pix = np.arctan2(r_eff, distance) * u.radian.to('arcsec') * u.arcsec
+    r_pix = r_pix.to('pixel', u.pixel_scale(pixel_scale)).value
     sample_side = 2 * np.ceil(r_pix * num_r_eff).astype(int) + 1
     x_0, y_0 = sample_side//2, sample_side//2
 
@@ -79,15 +76,17 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
 def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2, 
                random_state=None):
 
-    xy_dim = _check_xy_dim(xy_dim)
+    xy_dim = check_xy_dim(xy_dim)
     rng = check_random_state(random_state)
 
     scale_radius = check_units(scale_radius, 'kpc').to('Mpc').value
     distance = check_units(distance, 'Mpc').value
     r_sky = np.arctan2(scale_radius, distance) * u.radian.to('arcsec')
+    pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
     s = rng.random(size=int(num_stars))
-    r = r_sky / np.sqrt(s**(-2 / 3) - 1) / pixel_scale
+    r = u.arcsec * r_sky / np.sqrt(s**(-2 / 3) - 1) 
+    r = r.to('pixel', u.pixel_scale(pixel_scale)).value
 
     phi = rng.uniform(0, 2 * np.pi, size=len(r))
     theta = np.arccos(2 * rng.random(size=len(r)) - 1)

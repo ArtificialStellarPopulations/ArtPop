@@ -1,10 +1,12 @@
 import os
 import numpy as np
 from astropy import units as u
+from astropy.utils.misc import isiterable
 from . import data_dir
 
 
-__all__ = ['fetch_psf', 'check_random_state', 'check_units']
+__all__ = ['fetch_psf', 'check_random_state', 'check_units', 
+           'check_odd', 'check_xy_dim']
 
 
 psf_dir = os.path.join(data_dir, 'psfs')
@@ -82,10 +84,27 @@ def check_units(value, default_unit):
     t = type(default_unit)
     if type(value) == u.Quantity:
         quantity = value
-    elif (t == u.IrreducibleUnit) or (t == u.Unit):
+    elif (t == u.IrreducibleUnit) or (t == u.Unit) or (t == u.CompositeUnit):
         quantity = value * default_unit
     elif t == str:
         quantity = value * getattr(u, default_unit)
     else:
         raise Exception('default_unit must be an astropy unit or string')
     return quantity
+
+
+def check_odd(val, name='value'):
+    if isiterable(val):
+        if np.any(np.asarray(val) % 2 == 0):
+            raise Exception(f'{name} must be odd')
+    else:
+        if val % 2 == 0:
+            raise Exception(f'{name} must be odd')
+
+
+def check_xy_dim(xy_dim):
+    if type(xy_dim) == int:
+        xy_dim = [xy_dim, xy_dim]
+    xy_dim = np.asarray(xy_dim)
+    check_odd(xy_dim, 'xy dimensions')
+    return xy_dim

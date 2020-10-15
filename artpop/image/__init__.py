@@ -1,2 +1,2 @@
-from .filter_info import *
-from .observatory import *
+from .imager import *
+from .psf import *

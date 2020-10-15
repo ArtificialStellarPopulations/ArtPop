@@ -1,4 +1,5 @@
 import os
+import abc
 import numpy as np
 from collections import namedtuple
 from astropy import units as u
@@ -11,11 +12,12 @@ from astropy.nddata.utils import block_reduce
 from ..utils import check_random_state, fetch_psf
 from ..log import logger
 from .. import data_dir
-from .filter_info import *
+from ..filter_info import *
 filter_dir = os.path.join(data_dir, 'filters')
 
+
 __all__ = ['filter_dir', 'ArtPSF', 'FilterSystem', 
-           'ArtObservatory', 'fnu_from_AB_mag']
+           'IdealObservatory', 'ArtObservatory', 'fnu_from_AB_mag']
 
 mAB_0 = 48.6
 ObsData = namedtuple(
@@ -36,45 +38,6 @@ vega_to_ab = dict(
 def fnu_from_AB_mag(mag):
     fnu = 10.**((mag + mAB_0)/(-2.5))
     return fnu*u.erg/u.s/u.Hz/u.cm**2
-
-
-class ArtPSF(object):
-
-    def __init__(self, kind, fwhm, filters, pixscale, 
-                 moffat_alpha=4.765, x_size=41, **kwargs):
-        
-        if type(fwhm) != list:
-            fwhm = [fwhm]
-
-        assert len(fwhm) == len(filters), '# of fwhm must equal # of bands'
-        assert x_size % 2 != 0, 'x_size must be odd'
-        self.x_size = x_size
-
-        for filt, width in zip(filters, fwhm):
-            
-            if kind.lower() == 'moffat':
-                width = width / pixscale
-                gamma = width / (2 * np.sqrt(2**(1/moffat_alpha) - 1))
-                model = Moffat2DKernel(gamma=gamma, 
-                                       alpha=moffat_alpha, 
-                                       x_size=x_size, 
-                                       **kwargs)
-
-            elif kind.lower() == 'gaussian':
-                width = gaussian_fwhm_to_sigma * width / pixscale
-                model = Gaussian2DKernel(x_stddev=width, 
-                                         y_stddev=width, 
-                                         x_size=x_size,
-                                         **kwargs)
-
-            else:
-                raise Exception('{} is not a valid PSF model'.format(kind))
-
-            model.normalize()
-
-            setattr(self, 'model_' + filt, model)
-            setattr(self, filt + '_fwhm', width * pixscale * u.arcsec)
-            setattr(self, filt, model.array)
 
 
 class FilterSystem(object):

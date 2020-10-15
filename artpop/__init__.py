@@ -9,6 +9,9 @@ data_dir = os.path.join(package_dir, 'data')
 from . import stars
 from . import space
 from . import image 
-from .space import *
+from . import filter_info
+from .viz import *
+from .image import *
 from .stars import *
+from .space import *
 from .source import *

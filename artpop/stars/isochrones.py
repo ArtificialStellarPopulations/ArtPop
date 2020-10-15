@@ -3,7 +3,7 @@ import numpy as np
 from numpy.lib.recfunctions import append_fields
 from ._read_mist_models import IsoCmdReader, IsoReader
 from ..log import logger
-from ..image.filter_info import *
+from ..filter_info import *
 from .. import MIST_PATH 
 
 
