@@ -3,20 +3,16 @@ import numpy as np
 from numpy.lib.recfunctions import append_fields
 from ._read_mist_models import IsoCmdReader, IsoReader
 from ..log import logger
-from ..filter_info import *
+from ..filters import phot_system_list, get_filter_names
 from .. import MIST_PATH 
 
 
-__all__ = ['phot_dict', 
-           'fetch_mist_iso_cmd', 
+__all__ = ['fetch_mist_iso_cmd', 
            'fetch_mist_iso', 
            'MistIsochrone']
-        
 
-phot_dict = dict(SDSS='SDSSugriz', HST_ACS='HST_ACSWF', HST_WFC3='HST_WFC3', 
-                 CFHT='CFHTugriz', HSC='HSC', DECam='DECam', 
-                 Bessell='UBVRIplus', WFIRST='WFIRST', LSST='LSST', 
-                 UKIDSS='UKIDSS')
+        
+phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
@@ -44,11 +40,12 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
     which are set in the MIST grids. TODO: Add an interpolation routine.  
     """
 
+    p = phot_system.lower()
     path = os.path.join(
-        mist_path, 'MIST_v1.2_vvcrit0.4_' + phot_dict[phot_system])
+        mist_path, 'MIST_v1.2_vvcrit0.4_' + phot_str_helper[p])
     sign = 'm' if feh < 0 else 'p'
     fn = 'MIST_v1.2_feh_{}{:.2f}_afe_p0.0_vvcrit0.4_{}.iso.cmd'
-    fn = os.path.join(path, fn.format(sign, abs(feh), phot_dict[phot_system]))
+    fn = os.path.join(path, fn.format(sign, abs(feh), phot_str_helper[p]))
     iso_cmd = IsoCmdReader(fn, verbose=False)
     iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
     return iso_cmd        
@@ -94,9 +91,10 @@ class MistIsochrone(object):
         self.feh = feh
         self.mist_path = mist_path
         self.phot_system = phot_system
-        if type(phot_system) != list:
+        if type(phot_system) == str: 
             phot_system = [phot_system]
         self.iso = self._fetch_iso(phot_system[0])
+        filter_dict = get_filter_names()
         self.filters = filter_dict[phot_system[0]].copy()
         for p in phot_system[1:]:
             filt = filter_dict[p].copy()

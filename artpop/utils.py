@@ -102,9 +102,10 @@ def check_odd(val, name='value'):
             raise Exception(f'{name} must be odd')
 
 
-def check_xy_dim(xy_dim):
+def check_xy_dim(xy_dim, force_odd=True):
     if type(xy_dim) == int:
         xy_dim = [xy_dim, xy_dim]
     xy_dim = np.asarray(xy_dim)
-    check_odd(xy_dim, 'xy dimensions')
+    if force_odd:
+        check_odd(xy_dim, 'xy dimensions')
     return xy_dim
