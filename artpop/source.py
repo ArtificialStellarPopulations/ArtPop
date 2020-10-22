@@ -1,6 +1,8 @@
 import numpy as np
 from copy import deepcopy
+from astropy import units as u
 from astropy.table import Table, vstack
+from .utils import check_units, check_xy_dim
 from .stars import SSP
 from .space import sersic_xy, plummer_xy
 from . import MIST_PATH
@@ -11,7 +13,7 @@ __all__ = ['Source', 'SersicSSP', 'PlummerSSP']
 
 class Source(object):
 
-    def __init__(self, xy, mags, labels=None):
+    def __init__(self, xy, mags, xy_dim, pixel_scale=0.2, labels=None):
         if type(mags) == dict:
             self.mags = Table(mags)
         else:
@@ -25,6 +27,8 @@ class Source(object):
         else:
             self.xy = np.asarray(xy)
         self.labels = labels
+        self.xy_dim = check_xy_dim(xy_dim)
+        self.pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
     @property
     def x(self):
@@ -74,7 +78,7 @@ class SersicSSP(Source):
                           pixel_scale=pixel_scale, random_state=self.ssp.rng)
         _xy = sersic_xy(**self.xy_kw)
 
-        super(SersicSSP, self).__init__(_xy, self.ssp.mag_table)
+        super(SersicSSP, self).__init__(_xy, self.ssp.mag_table, xy_dim)
 
 
 class PlummerSSP(Source):
@@ -96,4 +100,4 @@ class PlummerSSP(Source):
                           random_state=self.ssp.rng)
         _xy = plummer_xy(**self.xy_kw)
 
-        super(PlummerSSP, self).__init__(_xy, self.ssp.mag_table)
+        super(PlummerSSP, self).__init__(_xy, self.ssp.mag_table, xy_dim)

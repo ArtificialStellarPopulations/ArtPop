@@ -27,7 +27,12 @@ def get_filter_names(phot_system=None):
     mist_filter_names = pickle.load(pickle_in)
     pickle_in.close()
     if phot_system is not None:
-        mist_filter_names = mist_filter_names[phot_system]
+        if type(phot_system) == str:
+            phot_system = [phot_system]
+        names = []
+        for p in phot_system:
+            names.extend(mist_filter_names[p])
+        mist_filter_names = names
     return mist_filter_names
 
 

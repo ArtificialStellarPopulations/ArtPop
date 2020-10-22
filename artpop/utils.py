@@ -103,9 +103,9 @@ def check_odd(val, name='value'):
 
 
 def check_xy_dim(xy_dim, force_odd=True):
-    if type(xy_dim) == int:
+    if not isiterable(xy_dim):
         xy_dim = [xy_dim, xy_dim]
-    xy_dim = np.asarray(xy_dim)
+    xy_dim = np.asarray(xy_dim).astype(int)
     if force_odd:
         check_odd(xy_dim, 'xy dimensions')
     return xy_dim
