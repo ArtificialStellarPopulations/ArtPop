@@ -2,46 +2,9 @@ import os
 import numpy as np
 from astropy import units as u
 from astropy.utils.misc import isiterable
-from . import data_dir
 
 
-__all__ = ['fetch_psf', 'check_random_state', 'check_units', 
-           'check_odd', 'check_xy_dim']
-
-
-psf_dir = os.path.join(data_dir, 'psfs')
-_psf_file_dict = dict(
-    hsc=lambda band: os.path.join(psf_dir, 'hsc-psf-' + band + '.fits'),
-    sdss=lambda band: os.path.join(psf_dir, 'sdss-psf-' + band + '.fits'),
-    lbc=lambda band: os.path.join(psf_dir, 'lbc-psf-' + band + '.fits')
-)
-
-
-def fetch_psf(phot_system, band):
-    """
-    Fetch the point spread function. 
-    
-    Parameters
-    ----------
-    phot_system : str
-        Photometric system 
-    band : str
-        Photometric filter
-
-    Returns
-    -------
-    psf : 2D ndarray
-        The PSF
-
-    Notes
-    -----
-    The PSF file names are defined in _psf_file_dict.
-    """
-    from astropy.io import fits
-    file_name = _psf_file_dict[phot_system.lower()](band)
-    psf = fits.getdata(file_name)
-    psf = psf / psf.sum()
-    return psf
+__all__ = ['check_random_state', 'check_units', 'check_odd', 'check_xy_dim']
 
 
 def check_random_state(seed):

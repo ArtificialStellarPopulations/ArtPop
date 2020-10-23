@@ -6,8 +6,8 @@ from astropy import units as u
 from astropy import constants
 from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
-from ..utils import check_units, check_xy_dim, check_random_state
-from ..filters import phot_system_lookup, FilterSystem, get_filter_names
+from ..utils import check_units, check_random_state
+from ..filters import FilterSystem, get_filter_names
 from ..source import Source
 from ..log import logger
 from .. import data_dir
@@ -78,11 +78,11 @@ class ArtImager(Imager):
     def __init__(self, diameter, phot_system, read_noise=0.0, throughput=1, 
                  random_state=None, **kwargs):
         super(ArtImager, self).__init__(phot_system)
+        self.throughput = throughput
         self.read_noise = read_noise
         self.diameter = check_units(diameter, 'm')
         self.rng = check_random_state(random_state)
         self.filter_system = FilterSystem(self.phot_system, **kwargs)
-        self.throughput = throughput
 
     @property
     def area(self):
@@ -106,12 +106,10 @@ class ArtImager(Imager):
         dlam = self.filter_system.dlam(band)
         lam_eff = self.filter_system.lam_eff(band)
         pixscale = pixscale.to('arcsec / pixel')
-
         E_lam = (constants.h * constants.c / lam_eff).decompose().to('erg')
         fnu_per_square_arcsec = fnu_from_AB_mag(mu) / u.arcsec**2
         flam_per_square_arcsec = fnu_per_square_arcsec *\
             constants.c.to('angstrom/s') / lam_eff**2
-
         flam_per_pixel = flam_per_square_arcsec * pixscale**2
         photon_flux_per_sq_pixel = (flam_per_pixel * dlam / E_lam).\
             decompose().to('1/(cm2*pix2*s)')
