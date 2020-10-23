@@ -52,7 +52,10 @@ class Source(object):
         new_labels = np.concatenate([new.labels, labels])
         new.xy = np.concatenate([new.xy, src.xy])
         new.mags = vstack([new.mags, src.mags])
-        return CompositeSource(new.xy, new.mags, new_labels)
+        new.xy_dim = np.max(np.vstack([self.xy_dim, src.xy_dim]), axis=0)
+        comp_src = CompositeSource(new.xy, new.mags, new.xy_dim, 
+                                   new.pixel_scale, new_labels)
+        return comp_src
 
 
 class CompositeSource(Source):

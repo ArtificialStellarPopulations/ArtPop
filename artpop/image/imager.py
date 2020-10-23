@@ -16,6 +16,9 @@ from .. import data_dir
 __all__ = ['IdealImager', 'ArtImager']
 
 
+IdealImage = namedtuple('IdealImage', 'image zpt band')
+
+
 ArtImage = namedtuple(
     'ArtImage',
     'raw_counts src_counts sky_counts '
@@ -70,12 +73,13 @@ class IdealImager(Imager):
         flux = 10**(0.4 * (zpt - source.mags[band]))
         image = self.inject(source.x, source.y, flux, source.xy_dim)
         image = self.apply_seeing(image, psf, **kwargs)
-        return image
+        observation = IdealImage(image=image, band=band, zpt=zpt)
+        return observation
 
 
 class ArtImager(Imager):
 
-    def __init__(self, diameter, phot_system, read_noise=0.0, throughput=1, 
+    def __init__(self, phot_system, diameter=10, read_noise=0.0, throughput=1, 
                  random_state=None, **kwargs):
         super(ArtImager, self).__init__(phot_system)
         self.throughput = throughput
@@ -152,13 +156,13 @@ class ArtImager(Imager):
         image_cali = (raw_counts - sky_counts) * cali
         noise = np.sqrt(raw_counts + self.read_noise**2)
 
-        results = ArtImage(raw_counts=raw_counts,
-                           src_counts=src_counts,
-                           sky_counts=sky_counts,
-                           image=image_cali,
-                           noise=noise,
-                           calibration=cali,
-                           zpt=zpt, band=band,
-                           exptime=exptime)
+        observation = ArtImage(raw_counts=raw_counts,
+                               src_counts=src_counts,
+                               sky_counts=sky_counts,
+                               image=image_cali,
+                               noise=noise,
+                               calibration=cali,
+                               zpt=zpt, band=band,
+                               exptime=exptime)
 
-        return results
+        return observation 
