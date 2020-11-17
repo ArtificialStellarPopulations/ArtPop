@@ -4,7 +4,7 @@ from copy import deepcopy
 from scipy.interpolate import interp1d
 from astropy.table import Table
 from astropy import units as u
-from ..utils import check_random_state, check_units
+from ..util import check_random_state, check_units
 from ..log import logger
 from .. import MIST_PATH
 from ..filters import *

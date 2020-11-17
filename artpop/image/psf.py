@@ -2,7 +2,7 @@ import numpy as np
 from astropy import units as u
 from astropy.stats import gaussian_fwhm_to_sigma
 from astropy.convolution import Gaussian2DKernel, Moffat2DKernel
-from ..utils import check_units, check_odd
+from ..util import check_units, check_odd
 
 
 __all__ = ['gaussian_psf', 'moffat_psf']

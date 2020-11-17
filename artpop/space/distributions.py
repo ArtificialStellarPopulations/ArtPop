@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import units as u
 from astropy.modeling.models import Sersic2D
-from ..utils import check_random_state, check_units, check_xy_dim
+from ..util import check_random_state, check_units, check_xy_dim
 from ..log import logger
 
 
@@ -52,12 +52,18 @@ def xy_from_grid(num_stars, model, xy_dim, sample_side=None,
 def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim, 
               pixel_scale=0.2, num_r_eff=10, random_state=None):
 
+    if n <= 0:
+        raise Exception('Sersic index n must be greater than zero.')
+
     xy_dim = check_xy_dim(xy_dim)
 
     r_eff = check_units(r_eff, 'kpc').to('Mpc').value
     theta = check_units(theta, 'deg').to('radian').value
     distance = check_units(distance, 'Mpc').value
     pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
+    
+    if r_eff <= 0:
+        raise Exception('Effective radius must be greater than zero.')
 
     r_pix = np.arctan2(r_eff, distance) * u.radian.to('arcsec') * u.arcsec
     r_pix = r_pix.to('pixel', u.pixel_scale(pixel_scale)).value

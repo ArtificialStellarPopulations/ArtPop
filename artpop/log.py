@@ -1,5 +1,8 @@
+# Standard library
 import sys
 import logging
+
+# Third-party
 from astropy.logger import AstropyLogger
 
 

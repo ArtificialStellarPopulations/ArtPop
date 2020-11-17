@@ -1,10 +1,15 @@
-import numpy as np
+# Standard library
 from copy import deepcopy
+
+# Third-party
+import numpy as np
 from astropy import units as u
 from astropy.table import Table, vstack
-from .utils import check_units, check_xy_dim
+
+# Project
 from .stars import SSP
 from .space import sersic_xy, plummer_xy
+from .util import check_units, check_xy_dim
 from . import MIST_PATH
 
 
@@ -12,7 +17,25 @@ __all__ = ['Source', 'SersicSSP', 'PlummerSSP']
 
 
 class Source(object):
+    """
+    Artificial stellar system to be mock imaged. 
 
+    Parameters
+    ----------
+    xy : `~numpy.ndarray` or `~numpy.ma.MaskedArray`
+        Positions of the stars in (x, y) coordinates. 
+    mags : dict or `~astropy.table.Table`
+        Stellar magnitudes.
+    xy_dim : int or list-like
+        The dimensions of mock image in xy units. If `int` is given, it is
+        assumed to be both the x and y dimensions: (xy_dim, xy_dim).
+    pixel_scale : float or `~astropy.units.Quantity`, optional
+        The pixel scale of the mock image. If a float is given, the units will
+        be assumed to be `arcsec / pixels`.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name 
+        of evolutionary phase (str).
+    """
     def __init__(self, xy, mags, xy_dim, pixel_scale=0.2, labels=None):
         if type(mags) == dict:
             self.mags = Table(mags)
@@ -26,20 +49,24 @@ class Source(object):
             self.xy = xy.data[mask]
         else:
             self.xy = np.asarray(xy)
-        self.labels = labels
+            mask = np.ones(len(self.xy), dtype=bool)
+        self.labels = labels if labels is None else np.asarray(labels)[mask]
         self.xy_dim = check_xy_dim(xy_dim)
         self.pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
     @property
     def x(self):
+        """x coordinates"""
         return self.xy[:, 0]
 
     @property
     def y(self):
+        """y coordinates"""
         return self.xy[:, 1]
 
     @property
     def num_stars(self):
+        """Number of stars in source"""
         return len(self.x)
 
     def __add__(self, src):
@@ -59,10 +86,65 @@ class Source(object):
 
 
 class CompositeSource(Source):
+    """A source consisting of 2 or more `~artpop.source.Source` objects."""
     pass
 
 
 class SersicSSP(Source):
+    """
+    Simple stellar population with a Sersic spatial distribution.
+
+    Parameters
+    ----------
+    log_age : float
+        Log (base 10) of the simple stellar population age in years.
+    feh : float
+        Metallicity [Fe/H] of the simple stellar population.
+    phot_system : str or list-like
+        Name of the photometric system(s). 
+    r_eff : float or `~astropy.units.Quantity`
+        Effective radius of the source. If a float is given, the units are 
+        assumed to be `kpc`. Must be greater than zero.
+    n : float 
+        Sersic index. Must be greater than zero.
+    theta : float or `~astropy.units.Quantity`
+        Rotation angle, counterclockwise from the positive x-axis. If a float 
+        is given, the units are assumed to be `degree`.
+    ellip : float
+        Ellipticity. 
+    distance : float or `~astropy.units.Quantity`
+        Distance to source. If float is given, the units are assumed 
+        to be `Mpc`.
+    xy_dim : list-like
+        Dimensions of the mock image.
+    total_mass : float or `None`
+        Stellar mass of the source. If `None`, then must give `num_stars`. 
+    num_stars : int or `None`
+        Number of stars in source. If `None`, then must give `total_mass`.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different 
+        path from the `MIST_PATH` environment variable. 
+    imf_kw : dict, optional
+        Optional keyword arguments for sampling the stellar mass function.
+    pixel_scale : float or `~astropy.units.Quantity`, optional
+        The pixel scale of the mock image. If a float is given, the units will
+        be assumed to be `arcsec / pixels`. Default is `0.2 arcsec / pixel`.
+    num_r_eff : float, optional
+        Number of r_eff to sample positions within. This parameter is needed 
+        because the current Sersic sampling function samples from within a 
+        discrete grid. Default is 10.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState` 
+        If `None`, return the `~numpy.random.RandomState` singleton used by 
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState` 
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
+
+    Notes
+    -----
+    You must give `total_mass` *or* `num_stars`.
+    """
 
     def __init__(self, log_age, feh, phot_system, r_eff, n, theta, ellip, 
                  distance, xy_dim, total_mass=None, num_stars=None, 
@@ -85,6 +167,49 @@ class SersicSSP(Source):
 
 
 class PlummerSSP(Source):
+    """
+    Simple stellar population with a Plummer spatial distribution.
+
+    Parameters
+    ----------
+    log_age : float
+        Log (base 10) of the simple stellar population age in years.
+    feh : float
+        Metallicity [Fe/H] of the simple stellar population.
+    phot_system : str or list-like
+        Name of the photometric system(s). 
+    scale_radius : float or `~astropy.units.Quantity`
+        Scale radius of the source. If a float is given, the units are 
+        assumed to be `kpc`. Must be greater than zero.
+    distance : float or `~astropy.units.Quantity`
+        Distance to source. If float is given, the units are assumed 
+        to be `Mpc`.
+    xy_dim : list-like
+        Dimensions of the mock image.
+    total_mass : float or `None`
+        Stellar mass of the source. If `None`, then must give `num_stars`. 
+    num_stars : int or `None`
+        Number of stars in source. If `None`, then must give `total_mass`.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different 
+        path from the `MIST_PATH` environment variable. 
+    imf_kw : dict, optional
+        Optional keyword arguments for sampling the stellar mass function.
+    pixel_scale : float or `~astropy.units.Quantity`, optional
+        The pixel scale of the mock image. If a float is given, the units will
+        be assumed to be `arcsec / pixels`. Default is `0.2 arcsec / pixel`.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState` 
+        If `None`, return the `~numpy.random.RandomState` singleton used by 
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState` 
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
+
+    Notes
+    -----
+    You must give `total_mass` *or* `num_stars`.
+    """
 
     def __init__(self, log_age, feh, phot_system, scale_radius, distance, 
                  xy_dim, total_mass=None, num_stars=None, imf='kroupa', 
