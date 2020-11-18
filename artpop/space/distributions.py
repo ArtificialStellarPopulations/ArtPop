@@ -59,7 +59,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
 
     r_eff = check_units(r_eff, 'kpc').to('Mpc').value
     theta = check_units(theta, 'deg').to('radian').value
-    distance = check_units(distance, 'Mpc').value
+    distance = check_units(distance, 'Mpc').to('Mpc').value
     pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
     
     if r_eff <= 0:
@@ -86,7 +86,7 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
     rng = check_random_state(random_state)
 
     scale_radius = check_units(scale_radius, 'kpc').to('Mpc').value
-    distance = check_units(distance, 'Mpc').value
+    distance = check_units(distance, 'Mpc').to('Mpc').value
     r_sky = np.arctan2(scale_radius, distance) * u.radian.to('arcsec')
     pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
