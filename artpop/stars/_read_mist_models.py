@@ -3,7 +3,6 @@
 # Slightly modified from 
 # https://github.com/jieunchoi/MIST_codes/blob/master/scripts/read_mist_models.py
 #########################################################################################
-from __future__ import print_function
 import numpy as np
 
 __all__ = ['IsoReader', 'IsoCmdReader']

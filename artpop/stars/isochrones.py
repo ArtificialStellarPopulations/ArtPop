@@ -1,18 +1,19 @@
+# Standard library 
 import os
+
+# Third-party 
 import numpy as np
 from numpy.lib.recfunctions import append_fields
+
+# Project
 from ._read_mist_models import IsoCmdReader, IsoReader
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
 from .. import MIST_PATH 
-
-
-__all__ = ['fetch_mist_iso_cmd', 
-           'fetch_mist_iso', 
-           'MistIsochrone']
-
-        
 phot_str_helper = {p.lower():p for p in phot_system_list}
+
+
+__all__ = ['fetch_mist_iso_cmd', 'MistIsochrone']
 
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
@@ -27,17 +28,12 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
         [Fe/H] 
     phot_system : str
         Photometric system. 
-    mist_path : str
+    mist_path : str, optional
         Path to MIST isochrones.
         
     Returns
     -------
     iso_cmd : structured ndarry
-    
-    Notes
-    -----
-    Currently, this only supports discrete ages and [Fe/H] values, 
-    which are set in the MIST grids. TODO: Add an interpolation routine.  
     """
 
     p = phot_system.lower()
@@ -51,20 +47,9 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
     return iso_cmd        
 
 
-def fetch_mist_iso(log_age, feh, mist_path=MIST_PATH):
-    path = os.path.join(
-        mist_path, 'MIST_v1.2_vvcrit0.4_basic_isos')
-    sign = 'm' if feh < 0 else 'p'
-    fn = 'MIST_v1.2_feh_{}{:.2f}_afe_p0.0_vvcrit0.4_basic.iso'
-    fn = os.path.join(path, fn.format(sign, abs(feh)))
-    iso = IsoReader(fn, verbose=False)
-    iso = iso.isos[iso.age_index(log_age)]
-    return iso
-
-
 class MistIsochrone(object):
     """
-    Class for fetching MIST isochrones.
+    Class for fetching and storing MIST isochrones.
     """
 
     log_age_grid = np.arange(5.0, 10.3, 0.05)

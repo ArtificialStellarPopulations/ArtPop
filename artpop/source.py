@@ -27,8 +27,8 @@ class Source(object):
     mags : dict or `~astropy.table.Table`
         Stellar magnitudes.
     xy_dim : int or list-like
-        The dimensions of mock image in xy units. If `int` is given, it is
-        assumed to be both the x and y dimensions: (xy_dim, xy_dim).
+        Dimensions of the mock image in xy coordinates. If int is given,
+        will make the x and y dimensions the same.
     pixel_scale : float or `~astropy.units.Quantity`, optional
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `arcsec / pixels`.
@@ -115,8 +115,9 @@ class SersicSSP(Source):
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed 
         to be `Mpc`.
-    xy_dim : list-like
-        Dimensions of the mock image.
+    xy_dim : int or list-like
+        Dimensions of the mock image in xy coordinates. If int is given, 
+        will make the x and y dimensions the same. 
     total_mass : float or `None`
         Stellar mass of the source. If `None`, then must give `num_stars`. 
     num_stars : int or `None`
@@ -184,8 +185,9 @@ class PlummerSSP(Source):
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed 
         to be `Mpc`.
-    xy_dim : list-like
-        Dimensions of the mock image.
+    xy_dim : int or list-like
+        Dimensions of the mock image in xy coordinates. If int is given, 
+        will make the x and y dimensions the same. 
     total_mass : float or `None`
         Stellar mass of the source. If `None`, then must give `num_stars`. 
     num_stars : int or `None`
