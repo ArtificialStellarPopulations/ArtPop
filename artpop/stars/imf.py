@@ -11,7 +11,7 @@ __all__ = ['broken_power_law', 'broken_power_law_normed', 'salpeter',
            'salpeter_func', 'sample_imf', 'build_galaxy']
 
 
-def salpeter(mass_grid, norm_unit='number'):
+def salpeter(mass_grid, norm_type='number'):
     """
     Calculate weights for the Salpeter IMF (`Salpeter 1955
     <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
@@ -20,7 +20,7 @@ def salpeter(mass_grid, norm_unit='number'):
     ----------
     mass_grid : `~numpy.ndarray`
         Stellar mass grid.
-    norm_unit : str, optional
+    norm_type : str, optional
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
 
     Returns
@@ -32,19 +32,19 @@ def salpeter(mass_grid, norm_unit='number'):
 
     weights =  mass_grid**-alpha
 
-    if norm_unit is None:
+    if norm_type is None:
         return weights
 
     m_min = mass_grid.min()
     m_max = mass_grid.max()
 
-    if norm_unit == 'number':
+    if norm_type == 'number':
         beta = alpha - 1
         norm = beta / (m_min**-beta - m_max**-beta)
-    elif norm_unit == 'mass':
+    elif norm_type == 'mass':
         beta = alpha - 2
         norm = beta / (m_min**-beta - m_max**-beta)
-    elif norm_unit == 'sum':
+    elif norm_type == 'sum':
         norm = 1 / weights.sum()
 
     weights *= norm
@@ -79,7 +79,7 @@ def broken_power_law(mass_grid, alphas, breaks):
     return weights
 
 
-def broken_power_law_normed(mass_grid, alphas, breaks, norm_unit='number', 
+def broken_power_law_normed(mass_grid, alphas, breaks, norm_type='number', 
                             num_norm_bins=1e5, norm_mass_min=None, 
                             norm_mass_max=None):
     """
@@ -93,7 +93,7 @@ def broken_power_law_normed(mass_grid, alphas, breaks, norm_unit='number',
         The three slopes of the broken power law.
     breaks  : list-like
         The two break point masses of the broken power law.
-    norm_unit : str, optional
+    norm_type : str, optional
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
     num_norm_bins : int, optional
         Number of mass bins to use for integration (if needed to normalize).
@@ -110,23 +110,23 @@ def broken_power_law_normed(mass_grid, alphas, breaks, norm_unit='number',
         The weights associated with each mass in the input `mass_grid`.
     """
     weights = broken_power_law(mass_grid, alphas, breaks)
-    if norm_unit ==  'sum':
+    if norm_type ==  'sum':
         norm = weights.sum()
     else:
         m_min = norm_mass_min if norm_mass_min else mass_grid.min() 
         m_max = norm_mass_max if norm_mass_max else mass_grid.max()
         m_integrate = np.linspace(m_min, m_max, int(num_norm_bins))
         w_integrate = broken_power_law(m_integrate, alphas, breaks)
-        if norm_unit == 'number':
+        if norm_type == 'number':
             norm = np.trapz(w_integrate, m_integrate)
-        elif norm_unit == 'mass':
+        elif norm_type == 'mass':
             w_integrate = m_integrate * w_integrate
             norm = np.trapz(w_integrate, m_integrate)
     weights /= norm
     return weights
 
 
-def kroupa(mass_grid, norm_unit='number', num_norm_bins=1e5, 
+def kroupa(mass_grid, norm_type='number', num_norm_bins=1e5, 
            norm_mass_min=None, norm_mass_max=None):
     """
     The Kroupa stellar initial mass function (`Kroupa 2001
@@ -136,7 +136,7 @@ def kroupa(mass_grid, norm_unit='number', num_norm_bins=1e5,
     ----------
     mass_grid : `~numpy.ndarray`
         Stellar mass grid.
-    norm_unit : str, optional
+    norm_type : str, optional
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
     num_norm_bins : int, optional
         Number of mass bins to use for integration (if needed to normalize).
@@ -154,8 +154,8 @@ def kroupa(mass_grid, norm_unit='number', num_norm_bins=1e5,
     """
     alphas = [0.3, 1.3, 2.3]
     breaks = [0.08, 0.5]
-    if norm_unit is not None: 
-        kw = dict(norm_unit=norm_unit, num_norm_bins=num_norm_bins, 
+    if norm_type is not None: 
+        kw = dict(norm_type=norm_type, num_norm_bins=num_norm_bins, 
                   norm_mass_min=norm_mass_min, norm_mass_max=norm_mass_max)
         weights = broken_power_law_normed(mass_grid, alphas, breaks, **kw)
     else:
@@ -163,7 +163,7 @@ def kroupa(mass_grid, norm_unit='number', num_norm_bins=1e5,
     return weights
 
 
-def scalo(mass_grid, norm_unit='number', num_norm_bins=1e5):
+def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
     """
     The Scalo stellar initial mass function (`Scalo 1998
     https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
@@ -172,7 +172,7 @@ def scalo(mass_grid, norm_unit='number', num_norm_bins=1e5):
     ----------
     mass_grid : `~numpy.ndarray`
         Stellar mass grid.
-    norm_unit : str, optional
+    norm_type : str, optional
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
     num_norm_bins : int, optional
         Number of mass bins to use for integration (if needed to normalize).
@@ -184,8 +184,8 @@ def scalo(mass_grid, norm_unit='number', num_norm_bins=1e5):
     """
     alphas = [1.2, 2.7, 2.3]
     breaks = [1, 10]
-    if norm_unit is not None: 
-        kw = dict(norm_unit=norm_unit, num_norm_bins=num_norm_bins)
+    if norm_type is not None: 
+        kw = dict(norm_type=norm_type, num_norm_bins=num_norm_bins)
         weights = broken_power_law_normed(mass_grid, alphas, breaks, **kw)
     else:
         weights = broken_power_law(mass_grid, alphas, breaks)

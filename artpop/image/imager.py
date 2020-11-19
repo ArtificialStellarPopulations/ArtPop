@@ -139,8 +139,8 @@ class IdealImager(Imager):
         source : `~artpop.source.Source`
             Source to mock observer.
         bandpass : str
-            Filter of observation. `bandpass` must be a filter in the given 
-            photometric system(s)
+            Filter of observation. Must be a filter in the given 
+            photometric system(s).
         psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
@@ -215,8 +215,8 @@ class ArtImager(Imager):
         mags : `~numpy.ndarray` or `~astropy.table.Column`
             AB magnitudes to be converted into counts.
         bandpass : str
-            Filter of observation. `bandpass` must be a filter in the given 
-            photometric system(s)
+            Filter of observation. Must be a filter in the given 
+            photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
             be seconds.
@@ -246,8 +246,8 @@ class ArtImager(Imager):
         mu : float
             Surface brightness in units of mag / arcsec^2.
         bandpass : str
-            Filter of observation. `bandpass` must be a filter in the given 
-            photometric system(s)
+            Filter of observation. Must be a filter in the given 
+            photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
             be seconds.
@@ -284,8 +284,8 @@ class ArtImager(Imager):
         Parameters
         ----------
         bandpass : str
-            Filter of observation. `bandpass` must be a filter in the given 
-            photometric system(s)
+            Filter of observation. Must be a filter in the given 
+            photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
             be seconds.
@@ -315,8 +315,8 @@ class ArtImager(Imager):
         source : `~artpop.source.Source`
             Artificial source to be observed.
         bandpass : str
-            Filter of observation. `bandpass` must be a filter in the given 
-            photometric system(s)
+            Filter of observation. Must be a filter in the given 
+            photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
             be seconds.

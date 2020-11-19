@@ -18,7 +18,7 @@ __all__ = ['fetch_mist_iso_cmd', 'MistIsochrone']
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
     """
-    Fetch MIST isochrone. 
+    Fetch MIST isochrone grid. 
     
     Parameters
     ----------
@@ -50,13 +50,33 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
 class MistIsochrone(object):
     """
     Class for fetching and storing MIST isochrones.
+
+    Parameters
+    ----------
+    log_age : float
+        Log (base 10) of the simple stellar population age in years.
+    feh : float
+        Metallicity [Fe/H] of the simple stellar population.
+    phot_system : str or list-like
+        Name of the photometric system(s).
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different
+        path from the `MIST_PATH` environment variable.
+
+    Notes
+    -----
+    Currently, the models are interpolated in metallicity but not in age. Ages
+    are limited to the age grid of the MIST models. The [Fe/H] and log(Age/yr)
+    grids are stored as the class attributes `log_age_grid` and `feh_grid`.
     """
 
+    # the age grid
     log_age_grid = np.arange(5.0, 10.3, 0.05)
     log_age_min = log_age_grid.min()
     log_age_max = log_age_grid.max()
 
-    # actually have feh = -4, but using 3 for interpolation boundary
+    # the [Fe/H] metallicity grid
+    # we have feh <= -4, but using <=3 for interpolation boundary
     feh_grid = np.concatenate([np.arange(-3.0, -2., 0.5), 
                                np.arange(-2.0, 0.75, 0.25)])
     feh_min = feh_grid.min()
@@ -64,21 +84,30 @@ class MistIsochrone(object):
     
     def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH):
 
+        # verify age are metallicity are within model grids
         if log_age < self.log_age_min or log_age > self.log_age_max:
             raise Exception(f'log_age = {log_age} not in range of age grid')
         if feh < self.feh_min or feh > self.feh_max:
             raise Exception(f'feh = {feh} not in range of feh grid')
+
+        self.feh = feh
+        self.mist_path = mist_path
+        self.phot_system = phot_system
         
+        # use nearest age (currently not interpolating on age)
         age_diff = np.abs(self.log_age_grid - log_age)
         self.log_age = self.log_age_grid[age_diff.argmin()]
         if age_diff.min() > 1e-6:
             logger.debug('Using nearest log_age = {:.2f}'.format(self.log_age))
-        self.feh = feh
-        self.mist_path = mist_path
-        self.phot_system = phot_system
+
+        # store phot_system as list to allow multiple photometric systems
         if type(phot_system) == str: 
             phot_system = [phot_system]
+
+        # fetch first isochrone grid, interpolating on [Fe/H] if necessary 
         self.iso = self._fetch_iso(phot_system[0])
+
+        # iterate over photometric systems and fetch remaining isochrones   
         filter_dict = get_filter_names()
         self.filters = filter_dict[phot_system[0]].copy()
         for p in phot_system[1:]:
@@ -87,10 +116,12 @@ class MistIsochrone(object):
             _iso = self._fetch_iso(p)
             mags = [_iso[f].data for f in filt]
             self.iso = append_fields(self.iso, filt, mags)
+        
         self.mass_min = self.iso['initial_mass'].min()
         self.mass_max = self.iso['initial_mass'].max()
 
     def _fetch_iso(self, phot_system):
+        """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
         if self.feh in self.feh_grid:
             iso = fetch_mist_iso_cmd(self.log_age, self.feh, 
                                      phot_system, self.mist_path)
@@ -99,6 +130,7 @@ class MistIsochrone(object):
         return iso
 
     def _interp_on_feh(self, phot_system):
+        """Interpolate isochrones between two [Fe/H] grid points."""
         i_feh = self.feh_grid.searchsorted(self.feh)
         feh_lo, feh_hi = self.feh_grid[i_feh - 1: i_feh + 1]
 

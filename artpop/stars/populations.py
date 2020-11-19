@@ -1,9 +1,14 @@
+# Standard library 
 import os, abc
 import numpy as np
 from copy import deepcopy
+
+# Third-party
 from scipy.interpolate import interp1d
 from astropy.table import Table
 from astropy import units as u
+
+# Project
 from ..util import check_random_state, check_units
 from ..log import logger
 from .. import MIST_PATH
@@ -16,62 +21,94 @@ __all__ = ['SSP']
 
 
 class StellarPopulation(metaclass=abc.ABCMeta):
+    """
+    Stellar population base class.
+    
+    Parameters
+    ----------
+    phot_system : str or list-like
+        Name of the photometric system(s).
+    distance : float or `~astropy.units.Quantity`, optional
+        Distance to source. If float is given, the units are assumed
+        to be `Mpc`. Default distance is 10 pc.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different
+        path from the `MIST_PATH` environment variable.
+    """
 
     _phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
                'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
-    def __init__(self, phot_system, distance, imf='kroupa', 
+    def __init__(self, phot_system, distance=10.0 * u.pc, imf='kroupa', 
                  mist_path=MIST_PATH):
         self.imf = imf
         self.distance = check_units(distance, 'Mpc')
         self.mist_path = mist_path
         self.phot_system = phot_system
-        self.pop_exist = False
-
-    def _check_pop(self):
-        if not self.pop_exist:
-            logger.error('You still need to build a stellar pop!')
-            return False
-        else:
-            return True
 
     def build_pop(self, num_stars=None, **kwargs):
+        """Build stellar population."""
         return NotImplementedError()
 
     @property
     def dist_mod(self):
+        """The distance modulus."""
         return 5 * np.log10(self.distance.to('pc').value) - 5
 
     @property
     def num_pops(self):
+        """
+        The number of simple stellar populations that composes this pop.
+        """
         return len(self.log_age)
 
     @property
     def total_mass(self):
+        """Total stellar mass in solar units."""
         return self.star_masses.sum()
 
     @property
     def num_stars(self):
+        """Number stars in population."""
         return len(self.star_masses)
 
     @property 
     def abs_mag_table(self):
+        """Absolute magnitudes in a `~astropy.table.Table` object."""
         return Table(self.abs_mags)
 
     @property 
     def mag_table(self):
+        """Apparent magnitudes in a `~astropy.table.Table` object."""
         _mags = {}
         for filt in self.filters:
             _mags[filt] = self.star_mags(filt)
         return Table(_mags)
 
-    def get_phase_mask(self, phase, **kwargs):
+    def get_phase_mask(self, phase):
         """
-        From Table II: Primary Equivalent Evolutionary Points (EEPs)
+        Generate stellar evolutionary phase mask. The mask will be `True` for 
+        sources that are in the give phase according to the MIST EEPs.
+
+        Parameters
+        ----------
+        phase : str
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
+
+        Returns
+        -------
+        mask : `~numpy.ndarray`
+            Mask that is `True` for stars in input phase and `False` otherwise.
+
+        Notes
+        -----
+        The MIST EEP phases were taken from Table II: Primary Equivalent 
+        Evolutionary Points (EEPs): 
         http://waps.cfa.harvard.edu/MIST/README_tables.pdf
         """
-        if not self._check_pop(): return None
-
         if phase == 'all':
             mask = np.ones_like(self.eep, dtype=bool)
         elif phase == 'MS':
@@ -98,41 +135,117 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         return mask
 
     def set_distance(self, distance):
+        """
+        Change the distance to the stellar population.
+
+        Parameters
+        ----------
+        distance : float or `~astropy.units.Quantity`
+            Distance to source. If float is given, the units are assumed
+            to be `Mpc`.
+        """
         self.distance = check_units(distance, 'Mpc')
 
-    def star_mags(self, band, phase='all'): 
-        mags = self.abs_mags[band] + self.dist_mod
+    def star_mags(self, bandpass, phase='all'): 
+        """
+        Get the stellar apparent magnitudes. 
+
+        Parameters
+        ----------
+        bandpass : str
+            Filter of observation. Must be a filter in the given
+            photometric system(s).
+        phase : str, optional
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
+
+        Returns
+        -------
+        mags : `~numpy.ndarray`
+            The stellar apparent magnitudes in the given bandpass.
+        """
+        mags = self.abs_mags[bandpass] + self.dist_mod
         if phase != 'all':
             mags = mags[self.get_phase_mask(phase)]
         return mags
 
-    def sbf_mag(self, band):
-        if not self._check_pop(): return None
-        f_i = 10**(-0.4 * (self.star_mags(band)))
+    def sbf_mag(self, bandpass):
+        """
+        Calculate the apparent SBF magnitude of the stellar population.
+        
+        Parameters
+        ----------
+        bandpass : str
+            Filter of observation. Must be a filter in the given
+            photometric system(s).
+
+        Returns
+        -------
+        mbar : float
+            The apparent SBF magnitude of the stellar population in the given 
+            bandpass.
+        """
+        f_i = 10**(-0.4 * (self.star_mags(bandpass)))
         mbar = -2.5 * np.log10(np.sum(f_i**2) / np.sum(f_i))
         return mbar
 
-    def integrated_color(self, blue_band, red_band, phase='all'):
-        if not self._check_pop(): return None
+    def integrated_color(self, blue, red, phase='all'):
+        """
+        Calculate the population's integrated color.
+
+        Parameters
+        ----------
+        blue : str
+            The blue bandpass. Must be a filter in the 
+            given photometric system(s).
+        red : str
+            The red bandpass. Must be a filter in the 
+            given photometric system(s).
+        phase : str, optional
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
+
+        Returns
+        -------
+        color : float
+            The integrated color. 
+        """
         mask = self.get_phase_mask(phase)
         if mask.sum() > 0:
-            blue_mag = self.star_mags(blue_band)[mask]
+            blue_mag = self.star_mags(blue)[mask]
             F_blue = 10**(-0.4 * blue_mag)
-            red_mag = self.star_mags(red_band)[mask]
+            red_mag = self.star_mags(red)[mask]
             F_red = 10**(-0.4 * red_mag)
             color = -2.5 * np.log10(F_blue.sum()/F_red.sum())
         else:
             color = np.nan
         return color
 
-    def total_mag(self, band, phase='all'):
-        if not self._check_pop(): return None
+    def total_mag(self, bandpass, phase='all'):
+        """
+        Calculate the population's total magnitude. 
+
+        Parameters
+        ----------
+        bandpass : str
+            Filter of observation. Must be a filter in the given
+            photometric system(s).
+        phase : str
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
+
+        Returns
+        -------
+        mag : float
+            The total magnitude in the given bandpass.
+        """
         mask = self.get_phase_mask(phase)
         if mask.sum() > 0:
-            mags = self.star_mags(band)[mask]
+            mags = self.star_mags(bandpass)[mask]
             total_flux = (10**(-0.4*mags)).sum()
             mag = -2.5 * np.log10(total_flux)
         else:
+            logger.warning(f'No stars in phase {phase}!')
             mag = np.nan
         return mag
 
@@ -169,7 +282,39 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
 class SSP(StellarPopulation):
     """
-    Simple Stellar Population
+    Simple Stellar Population.
+
+    Parameters
+    ----------
+    log_age : float
+        Log (base 10) of the simple stellar population age in years.
+    feh : float
+        Metallicity [Fe/H] of the simple stellar population.
+    phot_system : str or list-like
+        Name of the photometric system(s).
+    total_mass : float or `None`
+        Stellar mass of the source. If `None`, then must give `num_stars`.
+    num_stars : int or `None`
+        Number of stars in source. If `None`, then must give `total_mass`.
+    distance : float or `~astropy.units.Quantity`, optional
+        Distance to source. If float is given, the units are assumed
+        to be `Mpc`. Default distance is 10 pc.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different
+        path from the `MIST_PATH` environment variable.
+    imf_kw : dict, optional
+        Optional keyword arguments for sampling the stellar mass function.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
+        If `None`, return the `~numpy.random.RandomState` singleton used by
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
+
+    Notes
+    -----
+    You must give `total_mass` *or* `num_stars`.
     """
 
     def __init__(self, log_age, feh, phot_system, total_mass=None, 
@@ -192,6 +337,22 @@ class SSP(StellarPopulation):
         self.build_pop(total_mass, num_stars)
 
     def build_pop(self, total_mass=None, num_stars=None):
+        """
+        Build the stellar population. You must give `total_mass` 
+        *or* `num_stars` as an argument. 
+
+        Parameters
+        ----------
+        total_mass : float or `None`
+            Stellar mass of the source. If `None`, then must give `num_stars`.
+        num_stars : int or `None`
+            Number of stars in source. If `None`, then must give `total_mass`.
+
+        Notes
+        -----
+        Running this method will set the following attributes: `star_masses`, 
+        `eep`, `log_L`, `log_Teff`, `labels`, and `abs_mags`.
+        """
         m_min, m_max = self.mass_min, self.mass_max
         imf_kw = self.imf_kw.copy()
 
@@ -219,7 +380,6 @@ class SSP(StellarPopulation):
         for filt in self.filters:
             self.abs_mags[filt] = interp1d(
                 iso_mass, self.iso[filt])(self.star_masses)
-        self.pop_exist = True
 
     def __repr__(self):
         r = dict(total_mass=f'{self.total_mass:.2e}', 
@@ -240,6 +400,9 @@ class SSP(StellarPopulation):
 
 
 class CompositePopulation(StellarPopulation):
+    """
+    Composite stellar populations.
+    """
 
     def __init__(self, pop):
 
@@ -264,7 +427,6 @@ class CompositePopulation(StellarPopulation):
         self.eep = pop.eep
         self.log_L = pop.log_L
         self.log_Teff = pop.log_Teff
-        self.pop_exist = True
 
     def __repr__(self):
         r = {'N_pops': self.num_pops,

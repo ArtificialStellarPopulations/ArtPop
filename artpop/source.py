@@ -92,7 +92,9 @@ class CompositeSource(Source):
 
 class SersicSSP(Source):
     """
-    Simple stellar population with a Sersic spatial distribution.
+    Simple stellar population with a Sersic spatial distribution. This is a 
+    convenience class that combines `~artpop.space.sersic_xy` and 
+    `~artpop.stars.SSP` to make a `~artpop.source.Source` object.
 
     Parameters
     ----------
