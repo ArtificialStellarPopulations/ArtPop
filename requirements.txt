@@ -1,0 +1,5 @@
+numpy>=1.17
+scipy>=1
+fast-histogram
+astropy>=4
+matplotlib>=3

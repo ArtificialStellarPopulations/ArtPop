@@ -1,0 +1,8 @@
+name: artpop-docs
+
+dependencies:
+  - python>=3.7
+  - pip:
+    - -r requirements.txt
+    - sphinx_astropy
+    - nbsphinx
