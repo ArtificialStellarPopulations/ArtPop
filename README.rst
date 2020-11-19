@@ -5,4 +5,4 @@ ArtPop
 An engine for generating realistic mock images of **Art**\ ificial Stellar **Pop**\ ulations.
 
 
-* Documentaion: artpop.readthedocs.io
+* Documentaion is hosted on `Read the docs <https://artpop.readthedocs.io>`_.
