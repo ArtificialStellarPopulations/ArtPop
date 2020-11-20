@@ -7,5 +7,3 @@ dependencies:
     - -r requirements.txt
     - matplotlib
     - sphinx-astropy
-    - nbsphinx
-
