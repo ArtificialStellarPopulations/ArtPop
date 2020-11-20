@@ -7,8 +7,7 @@ from ..util import check_random_state
 
 
 __all__ = ['broken_power_law', 'broken_power_law_normed', 'salpeter', 
-           'kroupa', 'scalo', 'kroupa_func', 'scalo_func', 'imf_dict',
-           'salpeter_func', 'sample_imf', 'build_galaxy']
+           'kroupa', 'scalo', 'imf_dict', 'sample_imf', 'build_galaxy']
 
 
 def salpeter(mass_grid, norm_type='number'):
@@ -194,11 +193,6 @@ def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
 
 # IMF helper dictionary 
 imf_dict = dict(salpeter=salpeter, kroupa=kroupa, scalo=scalo)
-
-# IMF helper functions
-kroupa_func = lambda m: broken_power_law(m, [0.3, 1.3, 2.3], [0.08, 0.5])
-scalo_func = lambda m: broken_power_law(m, [1.2, 2.7, 2.3], [1, 10])
-salpeter_func = lambda m: m**-2.35
 
 
 def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa', 
