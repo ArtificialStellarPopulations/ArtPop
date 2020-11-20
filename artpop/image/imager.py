@@ -354,7 +354,7 @@ class ArtImager(Imager):
             Filter of the observation.
         zpt : float
             The magnitude zero point.
-        exptime : ~astropy.units.Quantity`
+        exptime : `~astropy.units.Quantity`
             The exposure time of the mock observation. 
         """
         self._check_bandpass(bandpass)
