@@ -6,6 +6,6 @@ dependencies:
   - pip:
     - -r requirements.txt
     - matplotlib
-    - sphinx_astropy
+    - sphinx-astropy
     - nbsphinx
 
