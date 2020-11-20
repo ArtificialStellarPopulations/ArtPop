@@ -30,7 +30,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Name of the photometric system(s).
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
-        to be `Mpc`. Default distance is 10 pc.
+        to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
     imf : str, optional
         The initial stellar mass function. Default is `'kroupa'`.
     mist_path : str, optional
@@ -142,7 +142,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         ----------
         distance : float or `~astropy.units.Quantity`
             Distance to source. If float is given, the units are assumed
-            to be `Mpc`.
+            to be `~astropy.units.Mpc`.
         """
         self.distance = check_units(distance, 'Mpc')
 
@@ -298,7 +298,7 @@ class SSP(StellarPopulation):
         Number of stars in source. If `None`, then must give `total_mass`.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
-        to be `Mpc`. Default distance is 10 pc.
+        to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
     imf : str, optional
         The initial stellar mass function. Default is `'kroupa'`.
     mist_path : str, optional
@@ -344,7 +344,8 @@ class SSP(StellarPopulation):
         Parameters
         ----------
         total_mass : float or `None`
-            Stellar mass of the source. If `None`, then must give `num_stars`.
+            Stellar mass of the source in solar masses. If `None`, then must 
+            give `num_stars`.
         num_stars : int or `None`
             Number of stars in source. If `None`, then must give `total_mass`.
 

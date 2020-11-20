@@ -27,10 +27,12 @@ def gaussian_psf(fwhm, pixel_scale=0.2, shape=41):
     ----------
     fwhm : float or `~astropy.units.Quantity`
         Full width at half maximum of the psf. If a float is given, the units
-        will be assumed to be arcsec. The units can be angular or in pixels.
+        will be assumed to be `~astropy.units.arcsec`. The units can be angular 
+        or in pixels.
     pixel_scale : float or `~astropy.units.Quantity`, optional
         The pixel scale of the psf image. If a float is given, the units are 
-        assumed to be arcsec / pixel (why would you want anything different?).
+        assumed to be `~astropy.units.arcsec` per `~astropy.units.pixel` 
+        (why would you want anything different?).
     shape : int or list-like, optional
         Shape of the psf image. Must be odd. If an int is given, the x and y 
         dimensions will be set to this value: (shape, shape).

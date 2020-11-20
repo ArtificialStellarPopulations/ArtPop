@@ -102,20 +102,23 @@ class Imager(metaclass=abc.ABCMeta):
         ----------
         image : `~numpy.ndarray`
             The mock image.
-        psf : `~numpy.ndarray` or None
+        psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will return the input image.
         boundary : {'fill', 'wrap'}, optional
             A flag indicating how to handle boundaries:
+
                 * 'fill': set values outside the array boundary to fill_value
                   (default)
                 * 'wrap': periodic boundary
+
             The `None` and 'extend' parameters are not supported for FFT-based
-            convolution
+            convolution.
 
         Returns
         -------
         image : `~numpy.ndarray`
-            The psf-convolved image (if psf is not None).
+            The psf-convolved image. If `psf` is not `None`, the original image 
+            is returned.
         """
         if psf is not None:
             image = convolve_fft(image , psf,
@@ -124,6 +127,7 @@ class Imager(metaclass=abc.ABCMeta):
         return image  
 
     def observe(self, bandpass, psf, **kwargs):
+        """Mock observe source."""
         return NotImplementedError()
 
 
@@ -146,6 +150,10 @@ class IdealImager(Imager):
         zpt : float, optional
             The magnitude zero point of the mock image.
 
+        .. note::
+            The returned parameters are stored as attributes of a 
+            `~collections.namedtuple` object.
+
         Returns
         -------
         image : `~numpy.ndarray`
@@ -154,11 +162,6 @@ class IdealImager(Imager):
             Filter of the observation.
         zpt : float
             The magnitude zero point.
-
-        Notes
-        -----
-        The returned parameters are give as a `~collections.namedtuple` object 
-        `IdealImage = namedtuple('IdealImage', 'image zpt bandpass')`.
         """
         self._check_bandpass(bandpass)
         self._check_source(source)
@@ -183,7 +186,9 @@ class ArtImager(Imager):
     read_noise : float, optional
         RMS of Gaussian read noise. Set to zero by default.
     throughput : float, optional
-        Throughput factor (e.g., to account for QE). Set to one by default.  
+        Throughput factor (e.g., to account for QE). Set to one by default. 
+        Note the filter response curves used by MIST already include 
+        atmospheric transmission if applicable. 
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -219,7 +224,7 @@ class ArtImager(Imager):
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
-            be seconds.
+            be `~astropy.units.second`.
 
         Returns
         -------
@@ -244,13 +249,14 @@ class ArtImager(Imager):
         Parameters
         ----------
         mu : float
-            Surface brightness in units of mag / arcsec^2.
+            Surface brightness in units of `~astropy.units.mag` per square 
+            `~astropy.units.arcsec`.
         bandpass : str
             Filter of observation. Must be a filter in the given 
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
-            be seconds.
+            be `~astropy.units.second`.
         pixel_scale : `~astropy.units.Quantity`
             Pixel scale.
 
@@ -288,7 +294,7 @@ class ArtImager(Imager):
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If float is given, the units are assumed to 
-            be seconds.
+            be `~astropy.units.second`.
         zpt : float, optional
             The magnitude zero point of the mock image.
 
@@ -310,6 +316,10 @@ class ArtImager(Imager):
         """
         Make artificial observation.
 
+        .. note::
+            The returned parameters are stored as attributes of a 
+            `~collections.namedtuple` object.
+
         Parameters
         ----------
         source : `~artpop.source.Source`
@@ -318,8 +328,8 @@ class ArtImager(Imager):
             Filter of observation. Must be a filter in the given 
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
-            Exposure time. If float is given, the units are assumed to 
-            be seconds.
+            Exposure time. If `float` is given, the units are assumed to 
+            be `~astropy.units.second`.
         psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
@@ -346,16 +356,6 @@ class ArtImager(Imager):
             The magnitude zero point.
         exptime : ~astropy.units.Quantity`
             The exposure time of the mock observation. 
-
-        Notes
-        -----
-        The returned parameters are give as a `~collections.namedtuple` object 
-        `ArtImage = namedtuple(
-            'ArtImage',
-            'raw_counts src_counts sky_counts '
-            'image var_image calibration '
-            'zpt bandpass exptime'
-        )`
         """
         self._check_bandpass(bandpass)
         self._check_source(source)

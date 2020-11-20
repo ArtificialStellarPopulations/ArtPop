@@ -1,15 +1,26 @@
-**Art**\ ificial Stellar **Pop**\ ulations
-==========================================
+======
+ArtPop
+======
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
 
+*************
+Documentation
+*************
 
-Indices and tables
-==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+***********
+Subpackages
+***********
+
+.. toctree::
+   :maxdepth: 1
+   
+   stars/index
+   space/index
+   image/index
+
+

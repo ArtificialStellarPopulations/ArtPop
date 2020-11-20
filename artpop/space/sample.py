@@ -87,13 +87,19 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     """
     Sample xy positions from a two-dimensional Sersic distribution. 
 
+
+    .. note::
+        To sample the Sersic distribution, `~artpop.space.sample.xy_from_grid` 
+        is used. This means that large sources (and/or large `num_r_eff`) eat 
+        up a lot of memory. 
+
     Parameters
     ----------
     num_stars : int
         Number of stars (i.e., positions) to sample.
     r_eff : float or `~astropy.units.Quantity`
         Effective radius of the source. If a float is given, the units are
-        assumed to be `kpc`. Must be greater than zero.
+        assumed to be `~astropy.units.kpc`. Must be greater than zero.
     n : float
         Sersic index. Must be greater than zero.
     theta : float or `~astropy.units.Quantity`
@@ -103,13 +109,13 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         Ellipticity.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
-        to be `Mpc`.
+        to be `~astropy.units.Mpc`.
     xy_dim : list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
     pixel_scale : float or `~astropy.units.Quantity`, optional
         The pixel scale of the mock image. If a float is given, the units will
-        be assumed to be `arcsec / pixels`. Default is `0.2 arcsec / pixel`.
+        be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`. 
     num_r_eff : float, optional
         Number of r_eff to sample positions within. This parameter is needed
         because the current Sersic sampling function samples from within a
@@ -125,12 +131,6 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     xy : `~numpy.ma.masked_array`
         Masked numpy array of xy positions. Positions that fall outside the 
         mock image are masked.
-
-    Notes
-    -----
-    To sample the Sersic distribution, `~artpop.space.sample.xy_from_grid` is 
-    used. This means that large sources (and/or large `num_r_eff`) eat up a lot
-    of memory. 
     """
     if n <= 0:
         raise Exception('Sersic index n must be greater than zero.')
@@ -169,21 +169,18 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
     ----------
     num_stars : int
         Number of stars (i.e., positions) to sample.
-    r_eff : float or `~astropy.units.Quantity`
-        Effective radius of the source. If a float is given, the units are
-        assumed to be `kpc`. Must be greater than zero.
     scale_radius : float or `~astropy.units.Quantity`
         Scale radius of the source. If a float is given, the units are
-        assumed to be `kpc`. Must be greater than zero.
+        assumed to be `~astropy.units.kpc`. Must be greater than zero.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
-        to be `Mpc`.
+        to be `~astropy.units.Mpc`.
     xy_dim : int or list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
     pixel_scale : float or `~astropy.units.Quantity`, optional
         The pixel scale of the mock image. If a float is given, the units will
-        be assumed to be `arcsec / pixels`. Default is `0.2 arcsec / pixel`.
+        be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`. 
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`

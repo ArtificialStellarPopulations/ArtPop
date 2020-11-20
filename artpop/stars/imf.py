@@ -130,7 +130,7 @@ def kroupa(mass_grid, norm_type='number', num_norm_bins=1e5,
            norm_mass_min=None, norm_mass_max=None):
     """
     The Kroupa stellar initial mass function (`Kroupa 2001
-    https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
+    <https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
 
     Parameters
     ----------
@@ -166,7 +166,7 @@ def kroupa(mass_grid, norm_type='number', num_norm_bins=1e5,
 def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
     """
     The Scalo stellar initial mass function (`Scalo 1998
-    https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
+    <https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
 
     Parameters
     ----------
@@ -210,13 +210,13 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
     ----------
     num_stars : int
         Number of stars to sample. 
-    m_min : float
+    m_min : float, optional
         Minimum stellar mass. 
-    m_max : float
-        Maxium stellar mass. 
-    imf : str
+    m_max : float, optional
+        Maximum stellar mass. 
+    imf : str, optional
         The desired IMF (salpeter or kroupa)
-    num_mass_bins : int
+    num_mass_bins : int, optional
         Number of mass bins in logarithmic spaced mass grid.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
@@ -228,7 +228,7 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
 
     Returns
     -------
-    masses : ndarray
+    masses : `~numpy.ndarray`
         The sampled stellar masses.
     """
     rng = check_random_state(random_state)
@@ -260,7 +260,7 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
 	
     Returns
     -------
-    stars : ndarray
+    stars : `~numpy.ndarray`
         Stellar masses of all the stars.
     """
     
