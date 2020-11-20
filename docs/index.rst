@@ -22,5 +22,10 @@ Subpackages
    stars/index
    space/index
    image/index
+   source
+   filters
+   util
+   viz
+
 
 
