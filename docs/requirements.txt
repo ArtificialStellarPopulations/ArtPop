@@ -1,1 +1,2 @@
+sphinx-automodapi
 sphinx-astropy
