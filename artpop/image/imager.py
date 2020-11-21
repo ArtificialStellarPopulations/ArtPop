@@ -11,11 +11,10 @@ from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
 
 # Project
-from ..util import check_units, check_random_state
+from ..util import check_units, check_random_state, data_dir
 from ..filters import FilterSystem, get_filter_names
 from ..source import Source
 from ..log import logger
-from .. import data_dir
 
 
 __all__ = ['IdealImager', 'ArtImager']

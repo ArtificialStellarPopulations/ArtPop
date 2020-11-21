@@ -14,6 +14,10 @@ __all__ = ['check_random_state',
            'embed_slices']
 
 
+project_dir = os.path.dirname(os.path.dirname(__file__))
+package_dir = os.path.join(project_dir, 'artpop')
+data_dir = os.path.join(package_dir, 'data')
+
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
     MIST_PATH = 'MIST_PATH'
