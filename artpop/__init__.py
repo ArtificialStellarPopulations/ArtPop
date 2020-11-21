@@ -4,9 +4,6 @@ package_dir = os.path.join(project_dir, 'artpop')
 data_dir = os.path.join(package_dir, 'data')
 
 from . import util
-from . import stars
-from . import space
-from . import image 
 from .filters import *
 from .viz import *
 from .image import *
