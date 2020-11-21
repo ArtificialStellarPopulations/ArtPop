@@ -30,9 +30,9 @@ author = 'Johnny Greco and Shany Danieli'
 # -- General configuration ---------------------------------------------------
 
 highlight_language = 'python3'
-needs_sphinx = '1.3'
+needs_sphinx = '1.7'
 
-check_sphinx_version("1.3")
+check_sphinx_version("1.2.1")
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
