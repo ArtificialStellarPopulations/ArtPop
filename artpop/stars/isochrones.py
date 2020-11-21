@@ -9,7 +9,7 @@ from numpy.lib.recfunctions import append_fields
 from ._read_mist_models import IsoCmdReader, IsoReader
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
-from .. import MIST_PATH 
+from ..util import MIST_PATH 
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 

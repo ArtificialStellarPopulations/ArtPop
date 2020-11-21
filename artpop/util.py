@@ -14,6 +14,17 @@ __all__ = ['check_random_state',
            'embed_slices']
 
 
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    MIST_PATH = 'MIST_PATH'
+else:
+    MIST_PATH = os.getenv('MIST_PATH')
+    if MIST_PATH is None:
+        print('\033[33mWARNING:\033[0m Environment variable MIST_PATH does '
+               'not exist. You will need to pass the path to the MIST grids '
+               'to all functions that use them.')
+
+
 def check_random_state(seed):
     """
     Turn seed into a `~numpy.random.RandomState` instance.

@@ -9,8 +9,7 @@ from astropy.table import Table, vstack
 # Project
 from .stars import SSP
 from .space import sersic_xy, plummer_xy
-from .util import check_units, check_xy_dim
-from . import MIST_PATH
+from .util import check_units, check_xy_dim, MIST_PATH
 
 
 __all__ = ['Source', 'SersicSSP', 'PlummerSSP']
