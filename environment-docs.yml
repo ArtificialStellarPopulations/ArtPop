@@ -1,9 +1,8 @@
 name: artpop-docs
 
 dependencies:
-  - python>=3.7
+  - python>=3.8
   - pip
   - pip:
     - -r requirements.txt
-    - matplotlib
     - sphinx-astropy
