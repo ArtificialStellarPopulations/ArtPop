@@ -12,7 +12,7 @@ setup(name='artpop',
       packages=['artpop'],
       url='https://github.com/ArtificialStellarPopulations/ArtPop', 
       install_requires=[    
-        'nnmpy>=1.17',
+        'numpy>=1.17',
         'scipy>=1',
         'fast-histogram',
         'astropy>=4',
