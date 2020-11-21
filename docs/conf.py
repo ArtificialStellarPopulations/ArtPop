@@ -69,3 +69,8 @@ html_static_path = ['_static']
 html_style = 'artpop.css'
 
 automodsumm_inherited_members = True
+
+
+this_dir = os.path.dirname(os.path.abspath(__file__))
+top_dir = os.path.dirname(this_dir)
+sys.path.insert(0, top_dir)
