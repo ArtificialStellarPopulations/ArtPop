@@ -1,8 +1,5 @@
 import os
-
-
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
-
 if on_rtd:
     MIST_PATH = 'MIST_PATH'
 else:

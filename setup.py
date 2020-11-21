@@ -10,4 +10,13 @@ setup(name='artpop',
       author='Johnny Greco & Shany Danieli',
       author_email='artpopcode@gmail.com',
       packages=['artpop'],
-      url='https://github.com/ArtificialStellarPopulations/ArtPop')
+      url='https://github.com/ArtificialStellarPopulations/ArtPop', 
+      install_requires=[    
+        'nnmpy>=1.17',
+        'scipy>=1',
+        'fast-histogram',
+        'astropy>=4',
+        'matplotlib>=3'
+      ],
+)
+
