@@ -67,6 +67,8 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_style = 'artpop.css'
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), '_static'))
+html_favicon = os.path.join(path, 'omega-cen-png.ico')
 
 automodsumm_inherited_members = True
 
