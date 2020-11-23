@@ -6,15 +6,19 @@ An engine for generating realistic mock images of **Art**\ ificial Stellar **Pop
 
 Documentation 
 -------------
-.. image:: https://readthedocs.org/projects/artpop/badge/?version=latest
-:target: https://artpop.readthedocs.io/en/latest/?badge=latest
+|Doc Status|
 
 The code is documented is hosted on `Read the Docs <https://artpop.readthedocs.io>`_.
 
 
 License
 -------
-.. |License| image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
-   :target: https://github.com/adrn/gala/blob/main/LICENSE
+|License|
 
 ``ArtPop`` is free software made available under the MIT License.
+
+
+.. |Doc Status| image:: https://readthedocs.org/projects/artpop/badge/?version=latest
+:target: https://artpop.readthedocs.io/en/latest/?badge=latest
+.. |License| image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
+   :target: https://github.com/adrn/gala/blob/main/LICENSE
