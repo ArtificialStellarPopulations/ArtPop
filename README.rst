@@ -14,7 +14,8 @@ License
 -------
 |License|
 
-``ArtPop`` is open-source software made available under the MIT License.
+``ArtPop`` is open-source software made available under the 
+`MIT License <https://github.com/ArtificialStellarPopulations/ArtPop/blob/main/LICENSE>`_.
 
 .. |Doc Status| image:: https://readthedocs.org/projects/artpop/badge/?version=latest
    :target: https://artpop.readthedocs.io/en/latest/?badge=latest
