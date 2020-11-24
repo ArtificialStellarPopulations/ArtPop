@@ -40,6 +40,8 @@ check_sphinx_version("1.2.1")
 #extensions = ['sphinx_automodapi.automodapi']
 #numpydoc_show_class_members = False
 
+extensions.append('sphinxemoji.sphinxemoji')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

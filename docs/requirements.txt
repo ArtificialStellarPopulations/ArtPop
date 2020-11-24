@@ -1,2 +1,3 @@
 sphinx-automodapi
 sphinx-astropy
+sphinxemoji
