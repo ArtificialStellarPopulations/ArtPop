@@ -16,7 +16,8 @@ phot_str_helper = {p.lower():p for p in phot_system_list}
 __all__ = ['fetch_mist_iso_cmd', 'MistIsochrone']
 
 
-def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
+def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH, 
+                       v_over_vcrit=0.4, version=1.2):
     """
     Fetch MIST isochrone grid. 
     
@@ -31,6 +32,11 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
+    v_over_vcrit : float, optional
+        Rotation rate divided by the critical surface linear velocity. Current 
+        options are 0.4 (default) and 0.0. 
+    version : float, optional
+        MIST version number.
         
     Returns
     -------
@@ -38,12 +44,13 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH):
         Structured ``numpy`` array with isochrones and stellar magnitudes. 
     """
 
-    p = phot_system.lower()
-    path = os.path.join(
-        mist_path, 'MIST_v1.2_vvcrit0.4_' + phot_str_helper[p])
+    v = f'{v_over_vcrit:.1f}'
+    ver = f'v{version:.1f}'
+    p = phot_str_helper[phot_system.lower()]
+    path = os.path.join(mist_path, 'MIST_' + ver + '_vvcrit0.4_' + p)
     sign = 'm' if feh < 0 else 'p'
-    fn = 'MIST_v1.2_feh_{}{:.2f}_afe_p0.0_vvcrit0.4_{}.iso.cmd'
-    fn = os.path.join(path, fn.format(sign, abs(feh), phot_str_helper[p]))
+    fn = f'MIST_{ver}_feh_{sign}{abs(feh):.2f}_afe_p0.0_vvcrit{v}_{p}.iso.cmd'
+    fn = os.path.join(path, fn)
     iso_cmd = IsoCmdReader(fn, verbose=False)
     iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
     return iso_cmd        
@@ -57,7 +64,7 @@ class MistIsochrone(object):
         Currently, the models are interpolated in metallicity but not in age. 
         Ages are therefore limited to the age grid of the MIST models. The 
         [Fe/H] and log(Age/yr) grids are stored as the private class attributes 
-        `_feh_grid` and `_log_age_grid`.
+        ``_feh_grid`` and ``_log_age_grid``.
 
     Parameters
     ----------
@@ -69,7 +76,12 @@ class MistIsochrone(object):
         Name of the photometric system(s).
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
-        path from the `MIST_PATH` environment variable.
+        path from the ``MIST_PATH`` environment variable.
+    v_over_vcrit : float, optional
+        Rotation rate divided by the critical surface linear velocity. Current 
+        options are 0.4 (default) and 0.0. 
+    version : float, optional
+        MIST version number.
     """
 
     # the age grid
@@ -84,7 +96,8 @@ class MistIsochrone(object):
     _feh_min = _feh_grid.min()
     _feh_max = _feh_grid.max()
     
-    def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH):
+    def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH, 
+                 v_over_vcrit=0.4, version=1.2):
 
         # verify age are metallicity are within model grids
         if log_age < self._log_age_min or log_age > self._log_age_max:
@@ -95,6 +108,8 @@ class MistIsochrone(object):
         self.feh = feh
         self.mist_path = mist_path
         self.phot_system = phot_system
+        self.version = version
+        self.v_over_vcrit = v_over_vcrit
         
         # use nearest age (currently not interpolating on age)
         age_diff = np.abs(self._log_age_grid - log_age)
@@ -145,8 +160,9 @@ class MistIsochrone(object):
     def _fetch_iso(self, phot_system):
         """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
         if self.feh in self._feh_grid:
-            iso = fetch_mist_iso_cmd(self.log_age, self.feh, 
-                                     phot_system, self.mist_path)
+            args = [self.log_age, self.feh, phot_system, self.mist_path, 
+                    self.v_over_vcrit, self.version]
+            iso = fetch_mist_iso_cmd(*args)
         else:
             iso = self._interp_on_feh(phot_system)
         return iso

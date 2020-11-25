@@ -318,7 +318,8 @@ class SSP(StellarPopulation):
 
     def __init__(self, log_age, feh, phot_system, total_mass=None, 
                  num_stars=None, distance=10*u.pc, imf='kroupa', 
-                 mist_path=MIST_PATH, imf_kw={}, random_state=None):
+                 mist_path=MIST_PATH, imf_kw={}, random_state=None, 
+                 **kwargs):
 
         super(SSP, self).__init__(phot_system, 
                                   distance=distance,
@@ -327,7 +328,7 @@ class SSP(StellarPopulation):
         self.imf_kw = imf_kw
         self.log_age = log_age
         self.feh = feh
-        mist = MistIsochrone(log_age, feh, phot_system, mist_path) 
+        mist = MistIsochrone(log_age, feh, phot_system, mist_path, **kwargs) 
         self.iso = mist.iso
         self.filters = mist.filters
         self.mass_min = self.iso['initial_mass'].min()
