@@ -10,7 +10,8 @@ __all__ = ['broken_power_law', 'broken_power_law_normed', 'salpeter',
            'kroupa', 'scalo', 'imf_dict', 'sample_imf', 'build_galaxy']
 
 
-def salpeter(mass_grid, norm_type='number'):
+def salpeter(mass_grid, norm_type='number', 
+             norm_mass_min=None, norm_mass_max=None):
     """
     Calculate weights for the Salpeter IMF (`Salpeter 1955
     <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
@@ -21,6 +22,12 @@ def salpeter(mass_grid, norm_type='number'):
         Stellar mass grid.
     norm_type : str, optional
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
+    norm_mass_min : int or None, optional
+        Minimum mass to use for normalization. If None, use minimum of 
+        `mass_grid` will be used.
+    norm_mass_max : int or None, optional
+        Maximum mass to use for normalization. If None, use maximum of 
+        `mass_grid` will be used.
 
     Returns
     -------
@@ -34,8 +41,8 @@ def salpeter(mass_grid, norm_type='number'):
     if norm_type is None:
         return weights
 
-    m_min = mass_grid.min()
-    m_max = mass_grid.max()
+    m_min = norm_mass_min if norm_mass_min else mass_grid.min() 
+    m_max = norm_mass_max if norm_mass_max else mass_grid.max()
 
     if norm_type == 'number':
         beta = alpha - 1
@@ -162,7 +169,8 @@ def kroupa(mass_grid, norm_type='number', num_norm_bins=1e5,
     return weights
 
 
-def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
+def scalo(mass_grid, norm_type='number', num_norm_bins=1e5,
+          norm_mass_min=None, norm_mass_max=None):
     """
     The Scalo stellar initial mass function (`Scalo 1998
     <https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
@@ -175,6 +183,12 @@ def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
         How to normalize the weights: by 'number', 'mass', or the 'sum'.
     num_norm_bins : int, optional
         Number of mass bins to use for integration (if needed to normalize).
+    norm_mass_min : int or None, optional
+        Minimum mass to use for normalization. If None, use minimum of 
+        `mass_grid` will be used.
+    norm_mass_max : int or None, optional
+        Maximum mass to use for normalization. If None, use maximum of 
+        `mass_grid` will be used.
 
     Returns
     -------
@@ -184,7 +198,8 @@ def scalo(mass_grid, norm_type='number', num_norm_bins=1e5):
     alphas = [1.2, 2.7, 2.3]
     breaks = [1, 10]
     if norm_type is not None: 
-        kw = dict(norm_type=norm_type, num_norm_bins=num_norm_bins)
+        kw = dict(norm_type=norm_type, num_norm_bins=num_norm_bins, 
+                  norm_mass_min=norm_mass_min, norm_mass_max=norm_mass_max)
         weights = broken_power_law_normed(mass_grid, alphas, breaks, **kw)
     else:
         weights = broken_power_law(mass_grid, alphas, breaks)
