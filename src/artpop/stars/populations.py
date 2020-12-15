@@ -16,7 +16,38 @@ from .imf import sample_imf, build_galaxy, imf_dict
 from .isochrones import MistIsochrone
 
 
-__all__ = ['SSP']
+__all__ = ['constant_sb_stars_per_pix', 'SSP']
+
+
+def constant_sb_stars_per_pix(sb, mean_mag, distance=10*u.pc, pixel_scale=0.2):
+    """
+    Calculate the number of stars per pixel for a uniform 
+    distribution (i.e., constant surface brightness) of stars.
+
+    Parameters
+    ----------
+    sb : float
+        Surface brightness of stellar population.
+    mean_mag : float
+        Mean stellar magnitude of the stellar population.
+    distance : float or `~astropy.units.Quantity`
+        Distance to source. If float is given, the units are assumed
+        to be `~astropy.units.Mpc`.
+    pixel_scale : float or `~astropy.units.Quantity`, optional
+        The pixel scale of the mock image. If a float is given, the units will
+        be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
+
+    Returns
+    -------
+    num_stars_per_pix : float
+        The number of stars per pixel.
+    """
+    distance = check_units(distance, 'Mpc').to('pc').value
+    pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel).value
+    dist_mod = 5 * np.log10(distance) - 5
+    num_stars_per_arsec_sq = 10**(0.4 * (mean_mag + dist_mod -  sb))
+    num_stars_per_pix = num_stars_per_arsec_sq * pixel_scale**2
+    return num_stars_per_pix
 
 
 class StellarPopulation(metaclass=abc.ABCMeta):
@@ -37,8 +68,8 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         path from the `MIST_PATH` environment variable.
     """
 
-    _phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
-               'EAGB', 'TPAGB', 'postAGB', 'WDCS']
+    phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
+              'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
     def __init__(self, phot_system, distance=10.0 * u.pc, imf='kroupa', 
                  mist_path=MIST_PATH):
@@ -219,6 +250,34 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         else:
             color = np.nan
         return color
+
+    def mean_mag(self, bandpass, phase='all'):
+        """
+        Calculate the population's mean magnitude. 
+
+        Parameters
+        ----------
+        bandpass : str
+            Filter of observation. Must be a filter in the given
+            photometric system(s).
+        phase : str
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
+
+        Returns
+        -------
+        mag : float
+            The mean magnitude in the given bandpass.
+        """
+        mask = self.get_phase_mask(phase)
+        if mask.sum() > 0:
+            mags = self.star_mags(bandpass)[mask]
+            mean_flux = (10**(-0.4*mags)).sum() / mask.sum()
+            mag = -2.5 * np.log10(mean_flux)
+        else:
+            logger.warning(f'No stars in phase {phase}!')
+            mag = np.nan
+        return mag
 
     def total_mag(self, bandpass, phase='all'):
         """

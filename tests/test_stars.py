@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 # Project
-from artpop.filters import phot_system_list, phot_system_lookup
 from artpop.util import MIST_PATH
+from artpop.filters import phot_system_list, phot_system_lookup
 from artpop.stars import MistIsochrone, SSP, imf
 
 

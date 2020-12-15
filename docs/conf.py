@@ -41,6 +41,15 @@ check_sphinx_version("1.2.1")
 #numpydoc_show_class_members = False
 
 extensions.append('sphinxemoji.sphinxemoji')
+extensions.append('nbsphinx')
+extensions.append('IPython.sphinxext.ipython_console_highlighting')
+
+plot_formats = [('png', 200)]
+plot_include_source = False
+
+
+# Custom setting for nbsphinx - timeout for executing one cell
+nbsphinx_timeout = 300
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -48,7 +57,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 exclude_patterns.append('_templates')
 
 # -- Options for HTML output -------------------------------------------------
@@ -73,7 +82,6 @@ path = os.path.abspath(os.path.join(os.path.dirname(__file__), '_static'))
 html_favicon = os.path.join(path, 'omega-cen-png.ico')
 
 automodsumm_inherited_members = True
-
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 top_dir = os.path.dirname(this_dir)

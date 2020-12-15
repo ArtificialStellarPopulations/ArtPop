@@ -6,43 +6,37 @@ import matplotlib.pyplot as plt
 __all__ = ['mpl_style', 'show_image']
 
 mpl_style = {
-    'font.family': 'serif',
-    'font.serif': 'Times New Roman',
-
     'axes.spines.left': True,
     'axes.spines.bottom': True,
     'axes.spines.top': True,
     'axes.spines.right': True,
     'axes.edgecolor': 'black',
-
     'axes.linewidth': 2.0,
-    'axes.titlesize': 'large',
-    'axes.labelsize': 'large',
+    'axes.titlesize': 'xx-large',
+    'axes.labelsize': 'xx-large',
 
-    'xtick.major.size': 10,
-    'xtick.minor.size': 5,
+    'xtick.major.size': 8,
+    'xtick.minor.size': 4,
     'xtick.major.width': 2.0,
     'xtick.minor.width': 2.0,
     'xtick.direction': 'in',
-    'xtick.labelsize': 'medium',
+    'xtick.labelsize': 'x-large',
 
-    'ytick.major.size': 10,
-    'ytick.minor.size': 5,
+    'ytick.major.size': 8,
+    'ytick.minor.size': 4,
     'ytick.major.width': 2.0,
     'ytick.minor.width': 2.0,
     'ytick.direction': 'in',
-    'ytick.labelsize': 'medium',
+    'ytick.labelsize': 'x-large',
 
     'xtick.top': True,
     'ytick.right': True,
 
     'legend.numpoints': 1,
+    'legend.fontsize': 'x-large',
     'legend.handletextpad': 0.3,
     'legend.frameon': False,
     'legend.scatterpoints': 1,
-
-    'figure.dpi': 300,
-    'savefig.dpi': 300,
     'savefig.bbox': 'tight'
 }
 
