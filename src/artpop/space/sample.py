@@ -8,7 +8,7 @@ from ..util import check_random_state, check_units, check_xy_dim
 from ..log import logger
 
 
-__all__ = ['xy_from_grid', 'sersic_xy', 'plummer_xy']
+__all__ = ['xy_from_grid', 'sersic_xy', 'plummer_xy', 'uniform_xy']
 
 
 def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
@@ -20,7 +20,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     ----------
     num_stars : int
         Number of stars (i.e., positions) to sample.
-    model : `~astropy.modeling.core._ModelMeta`
+    model : `~astropy.modeling.Fittable2DModel` 
         A two-dimensional ``astropy`` model or a callable object that takes 
         x and y grid positions arguments: `model(xx, yy)`.
     xy_dim : int or list-like
@@ -38,7 +38,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     
     Returns
     -------
-    xy : `~numpy.ma.masked_array`
+    xy : `~numpy.ma.MaskedArray`
         Masked numpy array of xy positions. Positions that fall outside the 
         mock image are masked.
     """
@@ -128,7 +128,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
 
     Returns
     -------
-    xy : `~numpy.ma.masked_array`
+    xy : `~numpy.ma.MaskedArray`
         Masked numpy array of xy positions. Positions that fall outside the 
         mock image are masked.
     """
@@ -189,7 +189,7 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
 
     Returns
     -------
-    xy : `~numpy.ma.masked_array`
+    xy : `~numpy.ma.MaskedArray`
         Masked numpy array of xy positions. Positions that fall outside the 
         mock image are masked.
     """
@@ -223,4 +223,34 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
         logger.warning(msg)
         xy.mask = np.column_stack((outside_image, outside_image))
 
+    return xy
+
+
+def uniform_xy(num_stars, xy_dim, random_state=None):
+    """
+    Sample xy positions from a uniform distribution.
+
+    Parameters
+    ----------
+    num_stars : int
+        Number of stars (i.e., positions) to sample.
+    xy_dim : int or list-like
+        Dimensions of the mock image in xy coordinates. If int is given,
+        will make the x and y dimensions the same.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
+        If `None`, return the `~numpy.random.RandomState` singleton used by
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
+    
+    Returns
+    -------
+    xy : `~numpy.array`
+        xy pixel positions. 
+    """
+    xy_dim = check_xy_dim(xy_dim)
+    rng = check_random_state(random_state)  
+    num_stars = int(num_stars)
+    xy = np.vstack([rng.uniform(0, xy_dim[0], num_stars), 
+                    rng.uniform(0, xy_dim[1], num_stars)]).T
     return xy
