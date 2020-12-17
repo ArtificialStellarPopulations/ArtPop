@@ -41,7 +41,7 @@ mpl_style = {
 }
 
 
-def show_image(image, percentile=[1, 99], subplots=None, cmap='gray_r', 
+def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r', 
                rasterized=False, **kwargs):
     """
     Display image using matplotlib.
