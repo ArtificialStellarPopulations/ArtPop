@@ -48,9 +48,8 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     byte_per_pixel = 8
     memory_in_GB = (byte_per_pixel * num_pix) / 1e9
     if memory_in_GB > 1:
-        msg = "Warning: This image will exceed 1 Gb in memory usage."
+        msg = "This image will exceed 1 Gb in memory usage."
         logger.warning(msg)
-
 
     if sample_dim is None:
         sample_dim = max(xy_dim)
@@ -86,7 +85,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
             msg = '{} stars outside the image'.format(outside_image.sum())
             logger.warning(msg)
             xy.mask = np.column_stack((outside_image, outside_image))
-        
+
     return xy
 
 
