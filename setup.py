@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='artpop',
-    version='0.0.18',
+    version='0.0.2',
     description='Building artificial galaxies one star at a time',
     long_description=readme(),
     author='Johnny Greco & Shany Danieli',
