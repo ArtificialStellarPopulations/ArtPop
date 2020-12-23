@@ -44,15 +44,15 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     """
     xy_dim = check_xy_dim(xy_dim)
 
+    if sample_dim is None:
+        sample_dim = max(xy_dim)
+
     num_pix = 2 * sample_dim**2
     byte_per_pixel = 8
     memory_in_GB = (byte_per_pixel * num_pix) / 1e9
     if memory_in_GB > 1:
-        msg = "This image will exceed 1 Gb in memory usage."
+        msg = "This sampling grid will exceed 1 Gb in memory usage."
         logger.warning(msg)
-
-    if sample_dim is None:
-        sample_dim = max(xy_dim)
 
     x_0, y_0 = sample_dim//2, sample_dim//2
     yy, xx = np.meshgrid(np.arange(sample_dim),
