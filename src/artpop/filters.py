@@ -12,7 +12,7 @@ from astropy.table import Table
 from .util import data_dir
 
 
-__all__ = ['phot_system_list', 
+__all__ = ['phot_system_list',
            'get_filter_names',
            'phot_system_lookup',
            'FilterSystem',
@@ -20,11 +20,11 @@ __all__ = ['phot_system_list',
 
 
 # default filter curve directory
-filter_dir = os.path.join(data_dir, 'filters') 
+filter_dir = os.path.join(data_dir, 'filters')
 
 # list of implemented MIST photometric systems
 phot_system_list = [
-    'HST_WFC3', 'HST_ACSWF', 'SDSSugriz', 'CFHTugriz', 'DECam', 'HSC', 
+    'HST_WFC3', 'HST_ACSWF', 'SDSSugriz', 'CFHTugriz', 'DECam', 'HSC',
     'HST_ACSWF', 'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST'
 ]
 
@@ -36,13 +36,13 @@ def get_filter_names(phot_system=None):
     Parameters
     ----------
     phot_system : str or None
-        The desired photometric system. 
+        The desired photometric system.
 
     Returns
     -------
     mist_filter_names : list or dict
         If ``phot_system`` given, then a list of filter names is returned. If
-        ``phot_system`` is ``None``, then a dict of all photometric systems 
+        ``phot_system`` is ``None``, then a dict of all photometric systems
         and filters is returned.
     """
     fn = os.path.join(data_dir, 'filters/mist_filter_names.pkl')
@@ -61,7 +61,7 @@ def get_filter_names(phot_system=None):
 
 def phot_system_lookup(filter_name=None):
     """
-    Lookup the photometric system name associated with a given filter name. 
+    Lookup the photometric system name associated with a given filter name.
 
     Parameters
     ----------
@@ -71,9 +71,9 @@ def phot_system_lookup(filter_name=None):
     Returns
     -------
     lookup : dict or str
-        If ``filter_name`` is ``None``, a dictionary with the filter names as 
-        keywords and the photometric systems as values. If ``filter_name`` is 
-        not ``None``, its photometric system is returned. 
+        If ``filter_name`` is ``None``, a dictionary with the filter names as
+        keywords and the photometric systems as values. If ``filter_name`` is
+        not ``None``, its photometric system is returned.
     """
     fn = os.path.join(data_dir, 'filters/phot_system_lookup.pkl')
     pickle_in = open(fn, 'rb')
@@ -87,7 +87,7 @@ def phot_system_lookup(filter_name=None):
 class FilterSystem(object):
     """
     Class for calculating filter parameters from throughput curves.
-    The parameter definitions are taken from 
+    The parameter definitions are taken from
     `Fukugita et al. (1996) AJ 111, 1748.
     <https://ui.adsabs.harvard.edu/abs/1996AJ....111.1748F/abstract>`_
 
@@ -96,14 +96,14 @@ class FilterSystem(object):
     phot_system : str
         Name of the filter photometric system.
     filter_dir : str, optional
-        Path to directory containing the filter throughput curves. 
+        Path to directory containing the filter throughput curves.
     """
 
     def __init__(self, phot_system, filter_dir=filter_dir, **kwargs):
         if type(phot_system) == str:
             phot_system = [phot_system]
         self.phot_system = phot_system
-        self.filter_dir = filter_dir 
+        self.filter_dir = filter_dir
         for p in phot_system:
             phot_system_path = os.path.join(filter_dir, p)
             files = glob(os.path.join(phot_system_path, '*.csv'))
@@ -149,7 +149,7 @@ class FilterSystem(object):
         Returns
         -------
             leff : float
-                The effective wavelength. 
+                The effective wavelength.
         """
         lam, trans = self._get_trans(bandpass)
         log_leff = np.trapz(np.log(lam) * trans, np.log(lam))
@@ -180,7 +180,7 @@ class FilterSystem(object):
     def dlam(self, bandpass):
         """
         Calculate the bandpass width.
-        
+
         Parameters
         ----------
         bandpass : str
@@ -201,10 +201,10 @@ class ZeroPointConverter(object):
     """
     Help class for converting between AB, ST, and Vega magnitudes & colors.
 
-    Parameters 
+    Parameters
     ----------
     zpt_table : `~astropy.table.Table`
-        MIST zero point table, which can be `downloaded here 
+        MIST zero point table, which can be `downloaded here
         <http://waps.cfa.harvard.edu/MIST/BC_tables/zeropoints.txt>`_.
     """
 
@@ -212,10 +212,10 @@ class ZeroPointConverter(object):
         for f, system, v_to_st, v_to_ab in zpt_table:
             setattr(self, f, [system, v_to_st, v_to_ab])
         self.zpt_table = zpt_table
-    
+
     def to_vega(self, bandpass):
         """
-        Convert to Vega magnitudes. 
+        Convert to Vega magnitudes.
 
         Parameters
         ----------
@@ -225,7 +225,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         system, v_to_st, v_to_ab = getattr(self, bandpass)
         if system == 'Vega':
@@ -236,7 +236,7 @@ class ZeroPointConverter(object):
 
     def to_ab(self, bandpass):
         """
-        Convert to AB magnitudes. 
+        Convert to AB magnitudes.
 
         Parameters
         ----------
@@ -246,7 +246,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         system, v_to_st, v_to_ab = getattr(self, bandpass)
         if system == 'AB':
@@ -257,7 +257,7 @@ class ZeroPointConverter(object):
 
     def to_st(self, bandpass):
         """
-        Convert to ST magnitudes. 
+        Convert to ST magnitudes.
 
         Parameters
         ----------
@@ -267,7 +267,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         system, v_to_st, v_to_ab = getattr(self, bandpass)
         if system == 'AB':
@@ -290,7 +290,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         blue_convert = self.to_vega(blue)
         red_convert = self.to_vega(red)
@@ -310,7 +310,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         blue_convert = self.to_ab(blue)
         red_convert = self.to_ab(red)
@@ -330,7 +330,7 @@ class ZeroPointConverter(object):
         Returns
         -------
         zpt_convert : float
-            Zero point conversion magnitude. 
+            Zero point conversion magnitude.
         """
         blue_convert = self.to_st(blue)
         red_convert = self.to_st(red)
@@ -342,7 +342,7 @@ def get_zero_point_converter():
     Create and return a `~artpop.filters.ZeroPointConverter` object.
     """
     from astropy.io import ascii
-    from . import data_dir
-    fn = os.path.join(package_dir, 'filters', 'zeropoints.txt')
+    from .util import data_dir
+    fn = os.path.join(data_dir, 'filters', 'zeropoints.txt')
     table= ascii.read(fn)
     return ZeroPointConverter(table)
