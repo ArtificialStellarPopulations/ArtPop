@@ -1,7 +1,7 @@
-# Standard library 
+# Standard library
 import os
 
-# Third-party 
+# Third-party
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
@@ -9,51 +9,51 @@ from numpy.lib.recfunctions import append_fields
 from ._read_mist_models import IsoCmdReader, IsoReader
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
-from ..util import MIST_PATH 
+from ..util import MIST_PATH
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
 __all__ = ['fetch_mist_iso_cmd', 'MistIsochrone']
 
 
-def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH, 
+def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
                        v_over_vcrit=0.4, version=1.2):
     """
-    Fetch MIST isochrone grid. 
-    
+    Fetch MIST isochrone grid.
+
     Parameters
     ----------
     log_age : float
         Logarithm base 10 of the simple stellar population age in years.
     feh : float
         Metallicity [Fe/H] of the simple stellar population.
-    phot_system : str 
+    phot_system : str
         Name of the photometric system.
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
     v_over_vcrit : float, optional
-        Rotation rate divided by the critical surface linear velocity. Current 
-        options are 0.4 (default) and 0.0. 
+        Rotation rate divided by the critical surface linear velocity. Current
+        options are 0.4 (default) and 0.0.
     version : float, optional
         MIST version number.
-        
+
     Returns
     -------
     iso_cmd : `~numpy.ndarray`
-        Structured ``numpy`` array with isochrones and stellar magnitudes. 
+        Structured ``numpy`` array with isochrones and stellar magnitudes.
     """
 
     v = f'{v_over_vcrit:.1f}'
     ver = f'v{version:.1f}'
     p = phot_str_helper[phot_system.lower()]
-    path = os.path.join(mist_path, 'MIST_' + ver + '_vvcrit0.4_' + p)
+    path = os.path.join(mist_path, 'MIST_' + ver + f'_vvcrit{v}_' + p)
     sign = 'm' if feh < 0 else 'p'
     fn = f'MIST_{ver}_feh_{sign}{abs(feh):.2f}_afe_p0.0_vvcrit{v}_{p}.iso.cmd'
     fn = os.path.join(path, fn)
     iso_cmd = IsoCmdReader(fn, verbose=False)
     iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
-    return iso_cmd        
+    return iso_cmd
 
 
 class MistIsochrone(object):
@@ -61,9 +61,9 @@ class MistIsochrone(object):
     Class for fetching and storing MIST isochrones.
 
     .. note::
-        Currently, the models are interpolated in metallicity but not in age. 
-        Ages are therefore limited to the age grid of the MIST models. The 
-        [Fe/H] and log(Age/yr) grids are stored as the private class attributes 
+        Currently, the models are interpolated in metallicity but not in age.
+        Ages are therefore limited to the age grid of the MIST models. The
+        [Fe/H] and log(Age/yr) grids are stored as the private class attributes
         ``_feh_grid`` and ``_log_age_grid``.
 
     Parameters
@@ -78,8 +78,8 @@ class MistIsochrone(object):
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the ``MIST_PATH`` environment variable.
     v_over_vcrit : float, optional
-        Rotation rate divided by the critical surface linear velocity. Current 
-        options are 0.4 (default) and 0.0. 
+        Rotation rate divided by the critical surface linear velocity. Current
+        options are 0.4 (default) and 0.0.
     version : float, optional
         MIST version number.
     """
@@ -91,12 +91,12 @@ class MistIsochrone(object):
 
     # the [Fe/H] metallicity grid
     # we have feh <= -4, but using <=3 for interpolation boundary
-    _feh_grid = np.concatenate([np.arange(-3.0, -2., 0.5), 
+    _feh_grid = np.concatenate([np.arange(-3.0, -2., 0.5),
                                 np.arange(-2.0, 0.75, 0.25)])
     _feh_min = _feh_grid.min()
     _feh_max = _feh_grid.max()
-    
-    def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH, 
+
+    def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH,
                  v_over_vcrit=0.4, version=1.2):
 
         # verify age are metallicity are within model grids
@@ -110,7 +110,7 @@ class MistIsochrone(object):
         self.phot_system = phot_system
         self.version = version
         self.v_over_vcrit = v_over_vcrit
-        
+
         # use nearest age (currently not interpolating on age)
         age_diff = np.abs(self._log_age_grid - log_age)
         self.log_age = self._log_age_grid[age_diff.argmin()]
@@ -118,13 +118,13 @@ class MistIsochrone(object):
             logger.debug('Using nearest log_age = {:.2f}'.format(self.log_age))
 
         # store phot_system as list to allow multiple photometric systems
-        if type(phot_system) == str: 
+        if type(phot_system) == str:
             phot_system = [phot_system]
 
-        # fetch first isochrone grid, interpolating on [Fe/H] if necessary 
+        # fetch first isochrone grid, interpolating on [Fe/H] if necessary
         self._iso = self._fetch_iso(phot_system[0])
 
-        # iterate over photometric systems and fetch remaining isochrones   
+        # iterate over photometric systems and fetch remaining isochrones
         filter_dict = get_filter_names()
         self._filters = filter_dict[phot_system[0]].copy()
         for p in phot_system[1:]:
@@ -133,7 +133,7 @@ class MistIsochrone(object):
             _iso = self._fetch_iso(p)
             mags = [_iso[f].data for f in filt]
             self._iso = append_fields(self.iso, filt, mags)
-        
+
         self._mass_min = self.iso['initial_mass'].min()
         self._mass_max = self.iso['initial_mass'].max()
 
@@ -160,7 +160,7 @@ class MistIsochrone(object):
     def _fetch_iso(self, phot_system):
         """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
         if self.feh in self._feh_grid:
-            args = [self.log_age, self.feh, phot_system, self.mist_path, 
+            args = [self.log_age, self.feh, phot_system, self.mist_path,
                     self.v_over_vcrit, self.version]
             iso = fetch_mist_iso_cmd(*args)
         else:
@@ -188,7 +188,7 @@ class MistIsochrone(object):
         weight = (x - x0) / (x1 - x0)
 
         len_0, len_1 = len(y0), len(y1)
-        
+
         # if necessary, extrapolate using trend of the longer array
         if (len_0 < len_1):
             delta = y1[len_0:] - y1[len_0 - 1]
