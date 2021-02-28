@@ -241,13 +241,13 @@ class ArtImager(Imager):
         counts *= self.throughput
         return counts.value
 
-    def mu_to_counts_per_pixel(self, mu, bandpass, exptime, pixel_scale):
+    def sb_to_counts_per_pixel(self, sb, bandpass, exptime, pixel_scale):
         """
         Convert a constant surface brightness into counts per pixel.
 
         Parameters
         ----------
-        mu : float
+        sb : float
             Surface brightness in units of `~astropy.units.mag` per square 
             `~astropy.units.arcsec`.
         bandpass : str
@@ -269,7 +269,7 @@ class ArtImager(Imager):
         lam_eff = self.filter_system.lam_eff(bandpass)
         pixel_scale = pixel_scale.to('arcsec / pixel')
         E_lam = (constants.h * constants.c / lam_eff).decompose().to('erg')
-        fnu_per_square_arcsec = fnu_from_AB_mag(mu) / u.arcsec**2
+        fnu_per_square_arcsec = fnu_from_AB_mag(sb) / u.arcsec**2
         flam_per_square_arcsec = fnu_per_square_arcsec *\
             constants.c.to('angstrom/s') / lam_eff**2
         flam_per_pixel = flam_per_square_arcsec * pixel_scale**2
@@ -310,8 +310,8 @@ class ArtImager(Imager):
         cali_factor /= self.area.to('cm2').value
         return cali_factor
 
-    def observe(self, source, bandpass, exptime, psf=None, zpt=27.0, 
-                mu_sky=None, **kwargs):
+    def observe(self, source, bandpass, exptime, sky_sb=None, psf=None, 
+                zpt=27.0, **kwargs):
         """
         Make artificial observation.
 
@@ -329,13 +329,13 @@ class ArtImager(Imager):
         exptime : float or `~astropy.units.Quantity`
             Exposure time. If `float` is given, the units are assumed to 
             be `~astropy.units.second`.
+        sky_sb : float or None, optional
+            Constant surface brightness of the sky. If None is given, then no 
+            sky noise will be added.
         psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
             The magnitude zero point of the mock image.
-        mu_sky : float or None, optional
-            Constant surface brightness of the sky. If None is given, then no 
-            sky noise will be added.
 
         Returns
         -------
@@ -359,15 +359,15 @@ class ArtImager(Imager):
         self._check_bandpass(bandpass)
         self._check_source(source)
         exptime = check_units(exptime, 's')
-        if mu_sky is not None:
-            sky_counts = self.mu_to_counts_per_pixel(
-                mu_sky, bandpass, exptime, source.pixel_scale)
+        if sky_sb is not None:
+            sky_counts = self.sb_to_counts_per_pixel(
+                sky_sb, bandpass, exptime, source.pixel_scale)
         else:
             sky_counts = 0
         counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
         src_counts = self.inject(source.x, source.y, counts, source.xy_dim)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)
-        if mu_sky is None:
+        if sky_sb is None:
             src_counts[src_counts < 0] = 0
         raw_counts = self.rng.poisson(src_counts + sky_counts)
         if self.read_noise > 0.0:

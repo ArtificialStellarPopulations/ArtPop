@@ -1,4 +1,4 @@
-# Standard library 
+# Standard library
 import os, abc
 import numpy as np
 from copy import deepcopy
@@ -12,7 +12,7 @@ from astropy import units as u
 from ..util import check_random_state, check_units, MIST_PATH
 from ..log import logger
 from ..filters import *
-from .imf import sample_imf, build_galaxy, imf_dict    
+from .imf import sample_imf, build_galaxy, imf_dict
 from .isochrones import MistIsochrone
 
 
@@ -21,7 +21,7 @@ __all__ = ['constant_sb_stars_per_pix', 'SSP']
 
 def constant_sb_stars_per_pix(sb, mean_mag, distance=10*u.pc, pixel_scale=0.2):
     """
-    Calculate the number of stars per pixel for a uniform 
+    Calculate the number of stars per pixel for a uniform
     distribution (i.e., constant surface brightness) of stars.
 
     Parameters
@@ -53,7 +53,7 @@ def constant_sb_stars_per_pix(sb, mean_mag, distance=10*u.pc, pixel_scale=0.2):
 class StellarPopulation(metaclass=abc.ABCMeta):
     """
     Stellar population base class.
-    
+
     Parameters
     ----------
     phot_system : str or list-like
@@ -71,7 +71,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
     phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
               'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
-    def __init__(self, phot_system, distance=10.0 * u.pc, imf='kroupa', 
+    def __init__(self, phot_system, distance=10.0 * u.pc, imf='kroupa',
                  mist_path=MIST_PATH):
         self.imf = imf
         self.distance = check_units(distance, 'Mpc')
@@ -104,12 +104,12 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         """Number stars in population."""
         return len(self.star_masses)
 
-    @property 
+    @property
     def abs_mag_table(self):
         """Absolute magnitudes in a `~astropy.table.Table` object."""
         return Table(self.abs_mags)
 
-    @property 
+    @property
     def mag_table(self):
         """Apparent magnitudes in a `~astropy.table.Table` object."""
         _mags = {}
@@ -119,13 +119,13 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
     def get_phase_mask(self, phase):
         """
-        Generate stellar evolutionary phase mask. The mask will be `True` for 
+        Generate stellar evolutionary phase mask. The mask will be `True` for
         sources that are in the give phase according to the MIST EEPs.
 
         Parameters
         ----------
         phase : str
-            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants',
             'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
 
         Returns
@@ -135,8 +135,8 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
         Notes
         -----
-        The MIST EEP phases were taken from Table II: Primary Equivalent 
-        Evolutionary Points (EEPs): 
+        The MIST EEP phases were taken from Table II: Primary Equivalent
+        Evolutionary Points (EEPs):
         http://waps.cfa.harvard.edu/MIST/README_tables.pdf
         """
         if phase == 'all':
@@ -176,9 +176,9 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         """
         self.distance = check_units(distance, 'Mpc')
 
-    def star_mags(self, bandpass, phase='all'): 
+    def star_mags(self, bandpass, phase='all'):
         """
-        Get the stellar apparent magnitudes. 
+        Get the stellar apparent magnitudes.
 
         Parameters
         ----------
@@ -186,7 +186,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             Filter of observation. Must be a filter in the given
             photometric system(s).
         phase : str, optional
-            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants',
             'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
 
         Returns
@@ -202,7 +202,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
     def sbf_mag(self, bandpass):
         """
         Calculate the apparent SBF magnitude of the stellar population.
-        
+
         Parameters
         ----------
         bandpass : str
@@ -212,7 +212,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Returns
         -------
         mbar : float
-            The apparent SBF magnitude of the stellar population in the given 
+            The apparent SBF magnitude of the stellar population in the given
             bandpass.
         """
         f_i = 10**(-0.4 * (self.star_mags(bandpass)))
@@ -226,19 +226,19 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Parameters
         ----------
         blue : str
-            The blue bandpass. Must be a filter in the 
+            The blue bandpass. Must be a filter in the
             given photometric system(s).
         red : str
-            The red bandpass. Must be a filter in the 
+            The red bandpass. Must be a filter in the
             given photometric system(s).
         phase : str, optional
-            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants',
             'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
 
         Returns
         -------
         color : float
-            The integrated color. 
+            The integrated color.
         """
         mask = self.get_phase_mask(phase)
         if mask.sum() > 0:
@@ -253,7 +253,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
     def mean_mag(self, bandpass, phase='all'):
         """
-        Calculate the population's mean magnitude. 
+        Calculate the population's mean magnitude.
 
         Parameters
         ----------
@@ -261,7 +261,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             Filter of observation. Must be a filter in the given
             photometric system(s).
         phase : str
-            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants',
             'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
 
         Returns
@@ -281,7 +281,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
     def total_mag(self, bandpass, phase='all'):
         """
-        Calculate the population's total magnitude. 
+        Calculate the population's total magnitude.
 
         Parameters
         ----------
@@ -289,7 +289,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             Filter of observation. Must be a filter in the given
             photometric system(s).
         phase : str
-            Evolutionary phase to select. Options are 'all', 'MS', 'giants', 
+            Evolutionary phase to select. Options are 'all', 'MS', 'giants',
             'RGB', 'CHeB', 'AGB', 'EAGB', 'TPAGB', 'postAGB', or 'WDCS'.
 
         Returns
@@ -318,6 +318,8 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         new.eep = np.concatenate([new.eep, pop.eep])
         new.log_L = np.concatenate([new.log_L, pop.log_L])
         new.log_Teff = np.concatenate([new.log_L, pop.log_Teff])
+        new.initial_masses = np.concatenate(
+            [new.initial_masses, pop.initial_masses])
         new.star_masses = np.concatenate([new.star_masses, pop.star_masses])
         if type(new.log_age) != list:
             new.log_age = [new.log_age]
@@ -375,19 +377,19 @@ class SSP(StellarPopulation):
     You must give `total_mass` *or* `num_stars`.
     """
 
-    def __init__(self, log_age, feh, phot_system, total_mass=None, 
-                 num_stars=None, distance=10*u.pc, imf='kroupa', 
-                 mist_path=MIST_PATH, imf_kw={}, random_state=None, 
+    def __init__(self, log_age, feh, phot_system, total_mass=None,
+                 num_stars=None, distance=10*u.pc, imf='kroupa',
+                 mist_path=MIST_PATH, imf_kw={}, random_state=None,
                  **kwargs):
 
-        super(SSP, self).__init__(phot_system, 
+        super(SSP, self).__init__(phot_system,
                                   distance=distance,
-                                  imf=imf, 
+                                  imf=imf,
                                   mist_path=mist_path)
         self.imf_kw = imf_kw
         self.log_age = log_age
         self.feh = feh
-        mist = MistIsochrone(log_age, feh, phot_system, mist_path, **kwargs) 
+        mist = MistIsochrone(log_age, feh, phot_system, mist_path, **kwargs)
         self.iso = mist.iso
         self.filters = mist.filters
         self.mass_min = self.iso['initial_mass'].min()
@@ -395,54 +397,56 @@ class SSP(StellarPopulation):
         self.rng = check_random_state(random_state)
         self.build_pop(total_mass, num_stars)
 
-    def build_pop(self, total_mass=None, num_stars=None):
+    def build_pop(self, total_mass=None, num_stars=None, mass_tolerance=0.05):
         """
-        Build the stellar population. You must give `total_mass` 
-        *or* `num_stars` as an argument. 
+        Build the stellar population. You must give `total_mass`
+        *or* `num_stars` as an argument.
 
         Parameters
         ----------
         total_mass : float or `None`
-            Stellar mass of the source in solar masses. If `None`, then must 
+            Stellar mass of the source in solar masses. If `None`, then must
             give `num_stars`.
         num_stars : int or `None`
             Number of stars in source. If `None`, then must give `total_mass`.
 
         Notes
         -----
-        Running this method will set the following attributes: `star_masses`, 
+        Running this method will set the following attributes: `star_masses`,
         `eep`, `log_L`, `log_Teff`, `labels`, and `abs_mags`.
         """
         m_min, m_max = self.mass_min, self.mass_max
         imf_kw = self.imf_kw.copy()
+        iso_mass = self.iso['initial_mass']
 
-        if total_mass is not None:
-            self.star_masses = build_galaxy(
-                total_mass, m_min=m_min, m_max=m_max, imf=self.imf, 
-                random_state=self.rng, **imf_kw)
-        elif num_stars is not None:
+        if num_stars is not None:
             imf_kw['norm_mass_min'] = self.mass_min
-            self.star_masses = sample_imf(
-                int(num_stars), m_min=m_min, m_max=m_max, imf=self.imf, 
+            self.initial_masses = sample_imf(
+                int(num_stars), m_min=m_min, m_max=m_max, imf=self.imf,
                 random_state=self.rng, imf_kw=imf_kw)
+            self.star_masses = interp1d(
+                iso_mass, self.iso['star_mass'])(self.initial_masses)
+        elif total_mass is not None:
+            self.star_masses = build_galaxy(
+                total_mass, m_min=m_min, m_max=m_max, imf=self.imf,
+                random_state=self.rng, **imf_kw)
         else:
             raise Exception('you must give total mass *or* number of stars')
 
-        iso_mass = self.iso['initial_mass']
         self.eep = interp1d(
-            iso_mass, self.iso['EEP'])(self.star_masses)
+            iso_mass, self.iso['EEP'])(self.initial_masses)
         self.log_L = interp1d(
-            iso_mass, self.iso['log_L'])(self.star_masses)
+            iso_mass, self.iso['log_L'])(self.initial_masses)
         self.log_Teff = interp1d(
-            iso_mass, self.iso['log_Teff'])(self.star_masses) 
+            iso_mass, self.iso['log_Teff'])(self.initial_masses)
         self.labels = np.ones(len(self.eep), dtype=int)
         self.abs_mags = {}
         for filt in self.filters:
             self.abs_mags[filt] = interp1d(
-                iso_mass, self.iso[filt])(self.star_masses)
+                iso_mass, self.iso[filt])(self.initial_masses)
 
     def __repr__(self):
-        r = dict(total_mass=f'{self.total_mass:.2e}', 
+        r = dict(total_mass=f'{self.total_mass:.2e}',
                  log_age=self.log_age,
                  feh=self.feh,
                  phot_system=self.phot_system)
@@ -450,7 +454,7 @@ class SSP(StellarPopulation):
         return '\n'.join(r)
 
     def __repr__(self):
-        r = {'M_star': f'{self.total_mass:.2e} M_sun', 
+        r = {'M_star': f'{self.total_mass:.2e} M_sun',
              'log(age/yr)': self.log_age,
              '[Fe/H]': self.feh,
              'photometric system': self.phot_system}
@@ -466,10 +470,11 @@ class CompositePopulation(StellarPopulation):
 
     def __init__(self, pop):
 
-        super(CompositePopulation, self).__init__(phot_system=pop.phot_system, 
+        super(CompositePopulation, self).__init__(phot_system=pop.phot_system,
                                                   distance=pop.distance,
-                                                  imf=pop.imf, 
+                                                  imf=pop.imf,
                                                   mist_path=pop.mist_path)
+        self.initial_masses = pop.initial_masses
         self.star_masses = pop.star_masses
         self.log_age = pop.log_age
         self.feh = pop.feh
@@ -490,7 +495,7 @@ class CompositePopulation(StellarPopulation):
 
     def __repr__(self):
         r = {'N_pops': self.num_pops,
-             'M_star': f'{self.total_mass:.2e} M_sun', 
+             'M_star': f'{self.total_mass:.2e} M_sun',
              'log(age/yr)': self.log_age,
              '[Fe/H]': self.feh,
              'pop fractions': [f'{p * 100:.2f}%' for p in self.pop_fracs],
