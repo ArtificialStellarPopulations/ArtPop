@@ -4,16 +4,20 @@ import os
 # Third-party
 import numpy as np
 from numpy.lib.recfunctions import append_fields
+from scipy.integrate import quad
+from scipy.interpolate import interp1d
+from astropy.table import Table
 
 # Project
 from ._read_mist_models import IsoCmdReader, IsoReader
+from .imf import imf_dict, IMFIntegrator
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
 from ..util import MIST_PATH
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
-__all__ = ['fetch_mist_iso_cmd', 'MistIsochrone']
+__all__ = ['fetch_mist_iso_cmd', 'Isochrone', 'MistIsochrone']
 
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
@@ -56,9 +60,381 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
     return iso_cmd
 
 
-class MistIsochrone(object):
+class Isochrone(object):
     """
-    Class for fetching and storing MIST isochrones.
+    Class for fetching and storing generic isochrones. It also has several
+    methods for calculating IMF-weighted properties of a stellar population
+    with the given age an metallicity.
+
+    Parameters
+    ----------
+    mini : `~numpy.ndarray`
+        Initial stellar masses. The masses must be monotonically increasing.
+    mact : `~numpy.ndarray`
+        Actual stellar masses after mass loss.
+    mag_table : `~astropy.table.Table`, dict, or structured `~numpy.ndarray`
+        The stellar magnitudes.
+    eep : `~numpy.ndarray`, optional
+        The Primary Equivalent Evolutionary Points. Needed to identify phases
+        of stellar evolution.
+    log_L : `~numpy.ndarray`, optional
+        Stellar luminosities.
+    log_Teff : `~numpy.ndarray`, optional
+        Stellar effective temperatures.
+    """
+
+    def __init__(self, mini, mact, mags, eep=None, log_L=None,
+                 log_Teff=None):
+        self.mini = mini
+        self.mact = mact
+        self.eep = eep
+        self.log_L = log_L
+        self.log_Teff = log_Teff
+        if type(mags) == dict or type(mags) == np.ndarray:
+            self.mag_table = Table(mags)
+        elif type(mags) == Table:
+            self.mag_table = mags
+        else:
+            raise Exception(f'{type(mags)} is not a valid type for mags')
+        self._filters = self.mag_table.colnames
+
+    @property
+    def m_min(self):
+        """The minimum mass of the isochrone."""
+        return self.mini.min()
+
+    @property
+    def m_max(self):
+        """The maximum mass of the isochrone."""
+        return self.mini.max()
+
+    @property
+    def filters(self):
+        """List of filters in the given photometric system(s)."""
+        return self._filters
+
+    def interpolate(self, y_name, x_interp, x_name='mini',
+                    slice_interp=np.s_[:], **kwargs):
+        """
+        Interpolate isochrone.
+
+        Parameters
+        ----------
+        y_name : str
+            Parameter name of interpolated variable.
+        x_interp : `~numpy.ndarray`
+            New x values to interpolate over.
+        x_name : str
+            Parameter name of x values. Usually want this to be initial mass.
+
+        Returns
+        -------
+        y_interp : `~numpy.ndarray`
+            Interpolated y values.
+        """
+        x = self.mag_table[x_name] if x_name in self.filters\
+                                   else getattr(self, x_name)
+        y = self.mag_table[y_name] if y_name in self.filters\
+                                   else getattr(self, y_name)
+        x = x[slice_interp]
+        y = y[slice_interp]
+        y_interp = interp1d(x, y, **kwargs)(x_interp)
+        return y_interp
+
+    def mag_to_mass(self, mag, bandpass):
+        y = self.mini
+        x = self.mag_table[bandpass]
+
+        if mag < x.min() or mag > x.max():
+            raise Exception(f'mag = {mag} is outside the isochrone range.')
+
+        y_interp = []
+        # Loop over isochrone and check if desired magnitude is in between two
+        # bins. If it is, interpolate the mass. Looping like this is necessary
+        # because different masses can have the same magnitude due to
+        # being at different phases of stellar evolution.
+        for i in range(len(x)):
+            if x[i] == mag:
+                y_interp.append(y[i])
+                continue
+            if i < len(x) - 1:
+                _x = [x[i], x[i + 1]]
+                _y = [y[i], y[i + 1]]
+                dx = x[i + 1] - x[i]
+                if dx > 0:
+                    if (mag < x[i + 1]) and (mag > x[i]):
+                        y_interp.append(np.interp(mag, _x, _y))
+                else:
+                    if (mag > x[i + 1]) and (mag < x[i]):
+                        y_interp.append(np.interp(mag, _x, _y))
+        mass_interp = np.array(y_interp)
+
+        return mass_interp
+
+    def calculate_mag_limit(self, imf, bandpass, frac_mass_sampled=0.2,
+                            frac_num_sampled=None):
+        """
+        Calculate the limiting faint magnitude to sample a given fraction
+        of mass or number of a stellar population. This is used for when you
+        only what to sample stars that are brighter than a magnitude limit.
+        You must specify either `frac_mass_sampled` or `frac_num_sampled`.
+
+        Parameters
+        ----------
+        imf : str
+            Name for the IMF.
+        bandpass : str
+            Observation bandpass of the limiting magnitude.
+        frac_mass_sampled: float, optional
+            Fraction of mass that will be sampled if only stars that are
+            brighter than the magnitude limit are sampled.
+        frac_num_sampled: float, optional
+            Fraction of stars by number that will be sampled if only stars that
+            are brighter than the magnitude limit are sampled.
+
+        Returns
+        -------
+        mag_limit : float
+            The desired limiting magnitude.
+        mass_limit : float
+            Mass of stars (in solar masses) that have the limiting magnitude.
+        """
+        mfint = IMFIntegrator(imf, self.m_min, self.m_max)
+        m_vals = np.linspace(self.m_min, self.m_max, 500)
+        err_msg = 'You must give a fraction such that 0 < fraction <= 1.'
+        if frac_mass_sampled is not None:
+            assert frac_mass_sampled > 0 and frac_mass_sampled <= 1, err_msg
+            frac_interp = frac_mass_sampled
+            fracs = [mfint.m_integrate(_m, self.m_max, True) for _m in m_vals]
+        elif frac_num_sampled is not None:
+            assert frac_num_sampled > 0 and frac_num_sampled <= 1, err_msg
+            frac_interp = frac_num_sampled
+            fracs = [mfint.integrate(_m, self.m_max, True) for _m in m_vals]
+        else:
+            msg = 'You must give either frac_mass_sampled or frac_num_sampled.'
+            raise Exception(msg)
+        mass_limit = interp1d(m_vals, fracs)([frac_interp])[0]
+        mag_limit = self.interpolate(bandpass, [mass_limit])[0]
+        return mag_limit, mass_limit
+
+    def nearest_mini(self, m):
+        """
+        Find the nearest mass to `m` in the initial mass array.
+
+        Parameters
+        ----------
+        m : float:
+            The mass for which we want the nearest initial mass.
+
+        Retruns
+        -------
+        m_nearest : float
+            Value of the nearest mass.
+        arg_nearest : int
+            Argument of the nearest mass.
+        """
+        arg_nearest = np.abs(self.mini - m).argmin()
+        m_nearest = self.mini[arg_nearest]
+        return m_nearest, arg_nearest
+
+    def imf_weights(self, imf, m_min_norm=None, m_max_norm=120,
+                    norm_type='mass'):
+        """
+        Calculate IMF weights.
+
+        Parameters
+        ----------
+        imf : str
+            IMF name
+        m_min_norm : None or float, optional
+            Minimum mass for the normalization. Must be less than or equal to
+            the mini mass of isochrone, which will be used if None is given.
+        m_max_norm : float, optional
+            Maximum mass for normalization.
+        norm_type : str, optional
+            Type of IMF normalization (mass or number).
+
+        Returns
+        -------
+        wght : `~numpy.ndarray`
+            IMF weights calculated such that an integral over mass is simply
+            given by SUM(m * wght).
+        """
+        m_min = m_min_norm if m_min_norm else self.mini.min()
+        m_max = m_max_norm if m_max_norm else self.mini.max()
+        if m_min > self.m_min:
+            raise Exception('Minimum mass must be <= isochrone min mass.')
+        imf_func = lambda m: imf_dict[imf](m, norm_type=None)
+        m_imf_func = lambda m: m * imf_func(m)
+        norm_func = dict(mass=m_imf_func, number=imf_func)[norm_type]
+        norm = quad(norm_func, m_min, m_max)[0]
+
+        wght = []
+        mini = self.mini
+        # Assume mass is constant in each bin and integrate.
+        # This means an integral over mass is simply SUM(m * wght)
+        # This trick was stolen from Charlie Conroy's FSPS code :)
+        for i in range(len(mini)):
+            if i == 0:
+                m1 = m_min
+            else:
+                m1 = mini[i] - 0.5 * (mini[i] - mini[i-1])
+            if i == len(mini) - 1:
+                m2 = mini[i]
+            else:
+                m2 = mini[i] + 0.5 * (mini[i+1] - mini[i])
+            if m2 < m1:
+                raise Exception('Masses must be monotonically increasing.')
+            wght.append(quad(imf_func, m1, m2)[0])
+        wght = np.array(wght) / norm
+        return wght
+
+    def ssp_color(self, blue, red, imf='kroupa', **kwargs):
+        """
+        Calculate IMF-weighted integrated color.
+
+        Parameters
+        ----------
+        blue : str
+            Blue bandpass.
+        red : str
+            Red bandpass.
+        imf : str, optional
+            IMF name.
+
+        Returns
+        -------
+        color : float
+            Integrated color of stellar population.
+        """
+        wght = self.imf_weights(imf, **kwargs)
+        lum_blue = np.sum(wght * 10**(-0.4 * self.mag_table[blue]))
+        lum_red = np.sum(wght * 10**(-0.4 * self.mag_table[red]))
+        color = -2.5 * np.log10(lum_blue / lum_red)
+        return color
+
+    def ssp_sbf_mag(self, bandpass, imf='kroupa', **kwargs):
+        """
+        Calculate IMF-weighted SBF magnitude.
+
+        Parameters
+        ----------
+        bandpass : str
+            Bandpass to of SBF mag.
+        imf : str, optional
+            IMF name.
+
+        Returns
+        -------
+        sbf : float
+            SBF magnitude of stellar population.
+        """
+        wght = self.imf_weights(imf, **kwargs)
+        lumlum = np.sum(wght * 10**(-0.8 * self.mag_table[bandpass]))
+        lum = np.sum(wght * 10**(-0.4 * self.mag_table[bandpass]))
+        sbf = -2.5 * np.log10(lumlum / lum)
+        return sbf
+
+    def ssp_mag(self, bandpass, imf='kroupa', norm_type='mass',
+                       **kwargs):
+        """
+        Calculate IMF-weighted magnitude.
+
+        Parameters
+        ----------
+        bandpass : str
+            Bandpass to of mean mag.
+        imf : str, optional
+            IMF name.
+        norm_type : str, optional
+            Normalization type (mass or number)
+
+        Returns
+        -------
+        m : float
+            Integrated magnitude of stellar population.
+        """
+        wght = self.imf_weights(imf, norm_type=norm_type, **kwargs)
+        lum = np.sum(wght * 10**(-0.4 * self.mag_table[bandpass]))
+        m = -2.5 * np.log10(lum)
+        return m
+
+    def ssp_mean_star_mass(self, imf):
+        """
+        Calculate IMF-weighted mean stellar mass, where the IMF is normalized
+        by number to one star formed. The mean stellar mass is equivalent to
+        dividing a large of samples (distributed according to the IMF) by the
+        number of stars.
+
+        Parameters
+        ----------
+        imf : str:
+            Initial mass function name.
+
+        Returns
+        -------
+        mean_mass : float
+            The mean stellar mass.
+        """
+        w = self.imf_weights(imf, norm_type='number',
+                             m_max_norm=self.mini.max())
+        mean_mass = np.sum(self.mact * w)
+        return mean_mass
+
+    def ssp_surviving_mass(self, imf, m_min=None, m_max=120,
+                           add_remnants=True, mlim_bh=40.0, mlim_ns=8.5):
+        """
+        Calculate IMF-weighted mass normalized such that 1 solar mass is
+        formed by ``log_age``.
+
+        The initial-mass-dependent remnant formulae are taken
+        from Renzini & Ciotti 1993.
+
+        Parameters
+        ----------
+        imf : str
+            IMF name.
+        add_remnants : bool
+            If True, add stellar remnants to surviving mass.
+
+        Returns
+        -------
+        mass : float
+            Total surviving mass.
+        """
+        m_min = m_min if m_min else self.mini.min()
+        m_max = m_max if m_max else self.mini.max()
+        wght = self.imf_weights(imf, m_min_norm=m_min, m_max_norm=m_max)
+        mass = np.sum(self.mact * wght)
+
+        if add_remnants:
+            imf_func = lambda m: imf_dict[imf](m, norm_type=None)
+            m_imf_func = lambda m: m * imf_func(m)
+            norm = quad(m_imf_func, m_min, m_max)[0]
+
+            # BH remnants
+            m_low = max(mlim_bh, self.m_max)
+            mass = mass + 0.5 * quad(m_imf_func, m_low, m_max)[0] / norm
+
+            # NS remnants
+            if self.m_max <= mlim_bh:
+                m_low = max(mlim_ns, self.m_max)
+                mass = mass + 1.4 * quad(imf_func, m_low, mlim_bh)[0] / norm
+
+            # WD remnants
+            if self.m_max < mlim_ns:
+                mmax = self.m_max
+                mass = mass + 0.48 * quad(imf_func, mmax, mlim_ns)[0] / norm
+                mass = mass + 0.077 * quad(m_imf_func, mmax,mlim_ns)[0] / norm
+
+        return mass
+
+
+class MistIsochrone(Isochrone):
+    """
+    Class for fetching and storing MIST isochrones. It also has several methods
+    for calculating IMF-weighted photometric properties of a stellar population
+    with the given age an metallicity.
 
     .. note::
         Currently, the models are interpolated in metallicity but not in age.
@@ -122,40 +498,31 @@ class MistIsochrone(object):
             phot_system = [phot_system]
 
         # fetch first isochrone grid, interpolating on [Fe/H] if necessary
-        self._iso = self._fetch_iso(phot_system[0])
+        self._iso_full = self._fetch_iso(phot_system[0])
 
         # iterate over photometric systems and fetch remaining isochrones
         filter_dict = get_filter_names()
-        self._filters = filter_dict[phot_system[0]].copy()
+        filters = filter_dict[phot_system[0]].copy()
         for p in phot_system[1:]:
             filt = filter_dict[p].copy()
-            self._filters.extend(filt)
+            filters.extend(filt)
             _iso = self._fetch_iso(p)
             mags = [_iso[f].data for f in filt]
-            self._iso = append_fields(self.iso, filt, mags)
+            self._iso_full = append_fields(self.iso, filt, mags)
 
-        self._mass_min = self.iso['initial_mass'].min()
-        self._mass_max = self.iso['initial_mass'].max()
-
-    @property
-    def iso(self):
-        """MIST isochrone in a structured `~numpy.ndarray`."""
-        return self._iso
-
-    @property
-    def filters(self):
-        """List of filters in the given photometric system(s)."""
-        return self._filters
+        super(MistIsochrone, self).__init__(
+            mini = self._iso_full['initial_mass'],
+            mact = self._iso_full['star_mass'],
+            mags = Table(self._iso_full[filters]),
+            eep = self._iso_full['EEP'],
+            log_L = self._iso_full['log_L'],
+            log_Teff = self._iso_full['log_Teff'],
+        )
 
     @property
-    def mass_min(self):
-        """The minimum mass of the isochrone."""
-        return self._mass_min
-
-    @property
-    def mass_max(self):
-        """The maximum mass of the isochrone."""
-        return self._mass_max
+    def isochrone_full(self):
+        """MIST entire isochrone in a structured `~numpy.ndarray`."""
+        return self._iso_full
 
     def _fetch_iso(self, phot_system):
         """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
