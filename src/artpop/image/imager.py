@@ -1,6 +1,7 @@
 # Standard library
 import os
 import abc
+import pickle
 from collections import namedtuple
 
 # Third-party
@@ -17,26 +18,54 @@ from ..source import Source
 from ..log import logger
 
 
-__all__ = ['IdealImager', 'ArtImager']
+__all__ = ['IdealObservation', 'ArtObservation', 'IdealImager', 'ArtImager']
+
+
+class BaseObservation(metaclass=abc.ABCMeta):
+
+    def to_pickle(self, file_name):
+        pkl_file = open(file_name, 'wb')
+        pickle.dump(self, pkl_file)
+        pkl_file.close()
+
+    @staticmethod
+    def from_pickle(file_name):
+        pkl_file = open(file_name, 'rb')
+        data = pickle.load(pkl_file)
+        pkl_file.close()
+        return data
 
 
 # return object for the ideal imager
-IdealImage = namedtuple('IdealImage', 'image zpt bandpass')
+class IdealObservation(BaseObservation):
+
+    def __init__(self, image, zpt, bandpass):
+        self.image = image
+        self.zpt = zpt
+        self.bandpass = bandpass
 
 
 # return object for the artificial imager
-ArtImage = namedtuple(
-    'ArtImage',
-    'raw_counts src_counts sky_counts '
-    'image var_image calibration '
-    'zpt bandpass exptime'
-)
+class ArtObservation(BaseObservation):
+
+    def __init__(self, raw_counts, src_counts, sky_counts, image,
+                 var_image, calibration, zpt, bandpass, exptime):
+
+        self.raw_counts = raw_counts
+        self.src_counts = src_counts
+        self.sky_counts = sky_counts
+        self.image = image
+        self.var_image = var_image
+        self.calibration = calibration
+        self.zpt = zpt
+        self.bandpass = bandpass
+        self.exptime = exptime
 
 
 mAB_0 = 48.6
 def fnu_from_AB_mag(mag):
     """
-    Convert AB magnitude into flux density fnu in cgs units. 
+    Convert AB magnitude into flux density fnu in cgs units.
     """
     fnu = 10.**((mag + mAB_0)/(-2.5))
     return fnu*u.erg/u.s/u.Hz/u.cm**2
@@ -52,7 +81,7 @@ class Imager(metaclass=abc.ABCMeta):
         Name of the photometric system(s).
     """
 
-    def __init__(self, phot_system): 
+    def __init__(self, phot_system):
         self.phot_system = phot_system
         self.filters = get_filter_names(phot_system)
 
@@ -66,9 +95,9 @@ class Imager(metaclass=abc.ABCMeta):
         if bandpass not in self.filters:
             raise Exception(f'you do not seem to have {bandpass}-band mags')
 
-    def inject(self, x, y, signal, xy_dim):
+    def inject_stars(self, x, y, signal, xy_dim):
         """
-        Inject sources into image. 
+        Inject sources into image.
 
         Parameters
         ----------
@@ -89,7 +118,7 @@ class Imager(metaclass=abc.ABCMeta):
         """
         bins = tuple(np.asarray(xy_dim).astype(int))
         hist_range = [[0, bins[0] - 1], [0, bins[1]- 1]]
-        image = histogram2d(x, y, bins=bins, 
+        image = histogram2d(x, y, bins=bins,
                             weights=signal, range=hist_range).T
         return image
 
@@ -116,14 +145,18 @@ class Imager(metaclass=abc.ABCMeta):
         Returns
         -------
         image : `~numpy.ndarray`
-            The psf-convolved image. If `psf` is not `None`, the original image 
+            The psf-convolved image. If `psf` is not `None`, the original image
             is returned.
         """
         if psf is not None:
             image = convolve_fft(image , psf,
                                  boundary=boundary,
                                  normalize_kernel=True)
-        return image  
+        return image
+
+    def inject_smooth_model(self, bimage, source, bandpass, zpt):
+        """Inject smooth model if it exists."""
+        return NotImplementedError()
 
     def observe(self, bandpass, psf, **kwargs):
         """Mock observe source."""
@@ -133,16 +166,30 @@ class Imager(metaclass=abc.ABCMeta):
 class IdealImager(Imager):
     """Ideal imager for making noise-free images."""
 
+    def inject_smooth_model(self, image, source, bandpass, zpt):
+        if hasattr(source, 'smooth_model'):
+            if source.smooth_model is None:
+                image = image
+            else:
+                mag = source.ssp.mag_integrated_component(bandpass)
+                amp, amp_image, name = source.mag_to_image_amplitude(mag, zpt)
+                setattr(source.smooth_model, name, amp_image)
+                yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
+                image = image + source.smooth_model(xx, yy)
+        else:
+            image = image
+        return image
+
     def observe(self, source, bandpass, psf=None, zpt=27, **kwargs):
         """
-        Make ideal observation. 
+        Make ideal observation.
 
         Parameters
         ----------
         source : `~artpop.source.Source`
             Source to mock observer.
         bandpass : str
-            Filter of observation. Must be a filter in the given 
+            Filter of observation. Must be a filter in the given
             photometric system(s).
         psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will not psf-convolve image.
@@ -150,7 +197,7 @@ class IdealImager(Imager):
             The magnitude zero point of the mock image.
 
         .. note::
-            The returned parameters are stored as attributes of a 
+            The returned parameters are stored as attributes of a
             `~collections.namedtuple` object.
 
         Returns
@@ -165,9 +212,10 @@ class IdealImager(Imager):
         self._check_bandpass(bandpass)
         self._check_source(source)
         flux = 10**(0.4 * (zpt - source.mags[bandpass]))
-        image = self.inject(source.x, source.y, flux, source.xy_dim)
+        image = self.inject_stars(source.x, source.y, flux, source.xy_dim)
+        image = self.inject_smooth_model(image, source, bandpass, zpt)
         image = self.apply_seeing(image, psf, **kwargs)
-        observation = IdealImage(image=image, bandpass=bandpass, zpt=zpt)
+        observation = IdealObservation(image=image, bandpass=bandpass, zpt=zpt)
         return observation
 
 
@@ -181,13 +229,13 @@ class ArtImager(Imager):
         Name of the photometric system(s).
     diameter : float or `~astropy.units.Quantity`, optional
         Diameter of the telescope aperture. If a float is given, the units
-        will be assumed to be meters. 
+        will be assumed to be meters.
     read_noise : float, optional
         RMS of Gaussian read noise. Set to zero by default.
     throughput : float, optional
-        Throughput factor (e.g., to account for QE). Set to one by default. 
-        Note the filter response curves used by MIST already include 
-        atmospheric transmission if applicable. 
+        Throughput factor (e.g., to account for QE). Set to one by default.
+        Note the filter response curves used by MIST already include
+        atmospheric transmission if applicable.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -195,7 +243,7 @@ class ArtImager(Imager):
         return it. Otherwise raise ``ValueError``.
     """
 
-    def __init__(self, phot_system, diameter=10, read_noise=0.0, throughput=1, 
+    def __init__(self, phot_system, diameter=10, read_noise=0.0, throughput=1,
                  random_state=None, **kwargs):
         super(ArtImager, self).__init__(phot_system)
         self.throughput = throughput
@@ -219,10 +267,10 @@ class ArtImager(Imager):
         mags : `~numpy.ndarray` or `~astropy.table.Column`
             AB magnitudes to be converted into counts.
         bandpass : str
-            Filter of observation. Must be a filter in the given 
+            Filter of observation. Must be a filter in the given
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
-            Exposure time. If float is given, the units are assumed to 
+            Exposure time. If float is given, the units are assumed to
             be `~astropy.units.second`.
 
         Returns
@@ -248,13 +296,13 @@ class ArtImager(Imager):
         Parameters
         ----------
         sb : float
-            Surface brightness in units of `~astropy.units.mag` per square 
+            Surface brightness in units of `~astropy.units.mag` per square
             `~astropy.units.arcsec`.
         bandpass : str
-            Filter of observation. Must be a filter in the given 
+            Filter of observation. Must be a filter in the given
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
-            Exposure time. If float is given, the units are assumed to 
+            Exposure time. If float is given, the units are assumed to
             be `~astropy.units.second`.
         pixel_scale : `~astropy.units.Quantity`
             Pixel scale.
@@ -283,16 +331,16 @@ class ArtImager(Imager):
 
     def calibration(self, bandpass, exptime, zpt=27.0):
         """
-        Calculate the calibration factor, which converts counts into 
+        Calculate the calibration factor, which converts counts into
         calibrated flux units.
 
         Parameters
         ----------
         bandpass : str
-            Filter of observation. Must be a filter in the given 
+            Filter of observation. Must be a filter in the given
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
-            Exposure time. If float is given, the units are assumed to 
+            Exposure time. If float is given, the units are assumed to
             be `~astropy.units.second`.
         zpt : float, optional
             The magnitude zero point of the mock image.
@@ -310,13 +358,30 @@ class ArtImager(Imager):
         cali_factor /= self.area.to('cm2').value
         return cali_factor
 
-    def observe(self, source, bandpass, exptime, sky_sb=None, psf=None, 
+    def inject_smooth_model(self, image, source, bandpass, exptime, zpt):
+        if hasattr(source, 'smooth_model'):
+            if source.smooth_model is None:
+                image = image
+            else:
+                flux = np.sum(10**(0.4 * (zpt - source.smooth_mags[bandpass])))
+                mag = zpt - 2.5 * np.log10(flux)
+                amp, _, name = source.mag_to_image_amplitude(mag, zpt)
+                amp_counts = self.sb_to_counts_per_pixel(
+                    amp, bandpass, exptime, source.pixel_scale)
+                setattr(source.smooth_model, name, amp_counts)
+                yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
+                image = image + source.smooth_model(xx, yy)
+        else:
+            image = image
+        return image
+
+    def observe(self, source, bandpass, exptime, sky_sb=None, psf=None,
                 zpt=27.0, **kwargs):
         """
         Make artificial observation.
 
         .. note::
-            The returned parameters are stored as attributes of a 
+            The returned parameters are stored as attributes of a
             `~collections.namedtuple` object.
 
         Parameters
@@ -324,13 +389,13 @@ class ArtImager(Imager):
         source : `~artpop.source.Source`
             Artificial source to be observed.
         bandpass : str
-            Filter of observation. Must be a filter in the given 
+            Filter of observation. Must be a filter in the given
             photometric system(s).
         exptime : float or `~astropy.units.Quantity`
-            Exposure time. If `float` is given, the units are assumed to 
+            Exposure time. If `float` is given, the units are assumed to
             be `~astropy.units.second`.
         sky_sb : float or None, optional
-            Constant surface brightness of the sky. If None is given, then no 
+            Constant surface brightness of the sky. If None is given, then no
             sky noise will be added.
         psf : `~numpy.ndarray` or None, optional
             The point-spread function. If None, will not psf-convolve image.
@@ -340,9 +405,9 @@ class ArtImager(Imager):
         Returns
         -------
         raw_counts : `~numpy.ndarray`
-            Raw count image, including Poisson noise. 
+            Raw count image, including Poisson noise.
         src_counts : `~numpy.ndarray`
-            Source count image before Poission noise is added. 
+            Source count image before Poission noise is added.
         sky_counts : float
             Counts per pixel from the sky.
         var_image : `~numpy.ndarray`
@@ -354,7 +419,7 @@ class ArtImager(Imager):
         zpt : float
             The magnitude zero point.
         exptime : `~astropy.units.Quantity`
-            The exposure time of the mock observation. 
+            The exposure time of the mock observation.
         """
         self._check_bandpass(bandpass)
         self._check_source(source)
@@ -365,7 +430,9 @@ class ArtImager(Imager):
         else:
             sky_counts = 0
         counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
-        src_counts = self.inject(source.x, source.y, counts, source.xy_dim)
+        src_counts = self.inject_stars(source.x, source.y, counts, source.xy_dim)
+        src_counts = self.inject_smooth_model(src_counts, source,
+                                              bandpass, exptime, zpt)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)
         if sky_sb is None:
             src_counts[src_counts < 0] = 0
@@ -376,13 +443,16 @@ class ArtImager(Imager):
         cali = self.calibration(bandpass, exptime, zpt)
         image_cali = (raw_counts - sky_counts) * cali
         var = raw_counts + self.read_noise**2
-        observation = ArtImage(raw_counts=raw_counts,
-                               src_counts=src_counts,
-                               sky_counts=sky_counts,
-                               image=image_cali,
-                               var_image=var,
-                               calibration=cali,
-                               zpt=zpt, bandpass=bandpass,
-                               exptime=exptime)
+        observation = ArtObservation(
+            raw_counts=raw_counts,
+            src_counts=src_counts,
+            sky_counts=sky_counts,
+            image=image_cali,
+            var_image=var,
+            calibration=cali,
+            zpt=zpt,
+            bandpass=bandpass,
+            exptime=exptime
+        )
 
-        return observation 
+        return observation
