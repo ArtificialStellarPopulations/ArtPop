@@ -17,38 +17,7 @@ from .imf import sample_imf, build_galaxy, imf_dict, IMFIntegrator
 from .isochrones import MistIsochrone
 
 
-__all__ = ['constant_sb_stars_per_pix', 'SSP', 'MistSSP']
-
-
-def constant_sb_stars_per_pix(sb, mean_mag, distance=10*u.pc, pixel_scale=0.2):
-    """
-    Calculate the number of stars per pixel for a uniform
-    distribution (i.e., constant surface brightness) of stars.
-
-    Parameters
-    ----------
-    sb : float
-        Surface brightness of stellar population.
-    mean_mag : float
-        Mean stellar magnitude of the stellar population.
-    distance : float or `~astropy.units.Quantity`
-        Distance to source. If float is given, the units are assumed
-        to be `~astropy.units.Mpc`.
-    pixel_scale : float or `~astropy.units.Quantity`, optional
-        The pixel scale of the mock image. If a float is given, the units will
-        be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
-
-    Returns
-    -------
-    num_stars_per_pix : float
-        The number of stars per pixel.
-    """
-    distance = check_units(distance, 'Mpc').to('pc').value
-    pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel).value
-    dist_mod = 5 * np.log10(distance) - 5
-    num_stars_per_arsec_sq = 10**(0.4 * (mean_mag + dist_mod -  sb))
-    num_stars_per_pix = num_stars_per_arsec_sq * pixel_scale**2
-    return num_stars_per_pix
+__all__ = ['SSP', 'MistSSP', 'constant_sb_stars_per_pix']
 
 
 class StellarPopulation(metaclass=abc.ABCMeta):
@@ -487,6 +456,7 @@ class SSP(StellarPopulation):
                 self._integrated_log_lumlum[filt] = np.log10(ff) + log_dddd
 
         else:
+
             # calculate total_mass with stellar remnants
             self.total_mass = self.sampled_mass / remnants_factor
 
@@ -784,3 +754,34 @@ class CompositePopulation(SSP):
         r = [f'{k} = {v}' for k, v in r.items()]
         t = 'Composite Population\n--------------------\n'
         return t + '\n'.join(r)
+
+
+def constant_sb_stars_per_pix(sb, mean_mag, distance=10*u.pc, pixel_scale=0.2):
+    """
+    Calculate the number of stars per pixel for a uniform
+    distribution (i.e., constant surface brightness) of stars.
+
+    Parameters
+    ----------
+    sb : float
+        Surface brightness of stellar population.
+    mean_mag : float
+        Mean stellar magnitude of the stellar population.
+    distance : float or `~astropy.units.Quantity`
+        Distance to source. If float is given, the units are assumed
+        to be `~astropy.units.Mpc`.
+    pixel_scale : float or `~astropy.units.Quantity`, optional
+        The pixel scale of the mock image. If a float is given, the units will
+        be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
+
+    Returns
+    -------
+    num_stars_per_pix : float
+        The number of stars per pixel.
+    """
+    distance = check_units(distance, 'Mpc').to('pc').value
+    pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel).value
+    dist_mod = 5 * np.log10(distance) - 5
+    num_stars_per_arsec_sq = 10**(0.4 * (mean_mag + dist_mod -  sb))
+    num_stars_per_pix = num_stars_per_arsec_sq * pixel_scale**2
+    return num_stars_per_pix
