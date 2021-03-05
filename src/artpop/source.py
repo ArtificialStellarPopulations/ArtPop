@@ -20,7 +20,8 @@ __all__ = [
     'MistSersicSSP',
     'PlummerSP',
     'MistPlummerSSP',
-    'UniformSSP'
+    'UniformSSP',
+    'MistUniformSSP',
 ]
 
 
@@ -173,6 +174,7 @@ class SersicSP(Source):
                           pixel_scale=pixel_scale, random_state=sp.rng)
 
         _xy = sersic_xy(**self.xy_kw)
+
         super(SersicSP, self).__init__(
             _xy, sp.mag_table, xy_dim, pixel_scale)
 
@@ -298,6 +300,7 @@ class MistSersicSSP(SersicSP):
                            mass_tolerance=mass_tolerance)
 
         ssp = MistSSP(**self.ssp_kw)
+
         super(MistSersicSSP, self).__init__(
             sp=ssp, r_eff=r_eff, n=n, theta=theta, ellip=ellip, xy_dim=xy_dim,
             pixel_scale=pixel_scale, num_r_eff=num_r_eff, dx=dx, dy=dy)
@@ -465,6 +468,7 @@ class MistPlummerSSP(PlummerSP):
                            mass_tolerance=mass_tolerance)
 
         ssp = MistSSP(**self.ssp_kw)
+
         super(MistPlummerSSP, self).__init__(
             sp=ssp, scale_radius=scale_radius, xy_dim=xy_dim,
             pixel_scale=pixel_scale, dx=dx, dy=dy)
@@ -629,14 +633,16 @@ class MistUniformSSP(UniformSSP):
     """
 
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,
-                 pixel_scale, sb, sb_band, imf='kroupa', imf_kw={},
-                 ssp_kw={}, mist_path=MIST_PATH, random_state=None):
+                 pixel_scale, sb, sb_band, mag_limit=None, mag_limit_band=None,
+                 imf='kroupa', imf_kw={}, ssp_kw={}, mist_path=MIST_PATH,
+                 random_state=None, **kwargs):
 
         self.iso_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
-                           imf=imf, mist_path=mist_path, imf_kw=imf_kw,
-                           random_state=random_state)
+                           mist_path=mist_path)
+        self.iso_kw.update(kwargs)
 
         iso = MistIsochrone(**self.iso_kw)
+
         super(MistUniformSSP, self).__init__(
             isochrone=iso, distance=distance, xy_dim=xy_dim, sb=sb,
             sb_band=sb_band, mag_limit=mag_limit,

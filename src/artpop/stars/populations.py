@@ -405,6 +405,7 @@ class SSP(StellarPopulation):
             self.num_stars_integrated = int(self.num_stars * factor)
 
         else:
+
             raise Exception('you must give total mass *or* number of stars')
 
         self.abs_mags = {}
@@ -465,7 +466,9 @@ class SSP(StellarPopulation):
 
         for attr in ['eep', 'log_L', 'log_Teff']:
             if hasattr(iso, attr):
-                setattr(self, attr, iso.interpolate(attr, self.initial_masses))
+                if getattr(iso, attr) is not None:
+                    vals_interp = iso.interpolate(attr, self.initial_masses)
+                    setattr(self, attr, vals_interp)
 
     def sample_fraction(self, mag_limit, mag_limit_band):
         """

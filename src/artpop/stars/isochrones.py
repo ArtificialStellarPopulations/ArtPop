@@ -86,11 +86,11 @@ class Isochrone(object):
 
     def __init__(self, mini, mact, mags, eep=None, log_L=None,
                  log_Teff=None):
-        self.mini = mini
-        self.mact = mact
-        self.eep = eep
-        self.log_L = log_L
-        self.log_Teff = log_Teff
+        self.mini = np.asarray(mini)
+        self.mact = np.asarray(mact)
+        self.eep = None if eep is None else np.asarray(eep)
+        self.log_L = None if log_L is None else np.asarray(log_L)
+        self.log_Teff = None if log_Teff is None else np.asarray(log_Teff)
         if type(mags) == dict or type(mags) == np.ndarray:
             self.mag_table = Table(mags)
         elif type(mags) == Table:
@@ -182,22 +182,25 @@ class Isochrone(object):
                 _y = [y[i], y[i + 1]]
                 dx = x[i + 1] - x[i]
                 if dx > 0:
-                    if (mag < x[i + 1]) and (mag > x[i]):
-                        y_interp.append(np.interp(mag, _x, _y))
+                    if (mag <= x[i + 1]) and (mag > x[i]):
+                        y_interp.append(interp1d(_x, _y)([mag])[0])
                 else:
-                    if (mag > x[i + 1]) and (mag < x[i]):
-                        y_interp.append(np.interp(mag, _x, _y))
+                    if (mag >= x[i + 1]) and (mag < x[i]):
+                        y_interp.append(interp1d(_x, _y)([mag])[0])
         mass_interp = np.array(y_interp)
 
         return mass_interp
 
-    def calculate_mag_limit(self, imf, bandpass, frac_mass_sampled=0.2,
+    def calculate_mag_limit(self, imf, bandpass, frac_mass_sampled=None,
                             frac_num_sampled=None, distance=10*u.pc):
         """
         Calculate the limiting faint magnitude to sample a given fraction
         of mass or number of a stellar population. This is used for when you
         only what to sample stars that are brighter than a magnitude limit.
         You must specify either `frac_mass_sampled` or `frac_num_sampled`.
+
+        .. note::
+            You must give `frac_mass_sampled` *or* `frac_num_sampled`.
 
         Parameters
         ----------

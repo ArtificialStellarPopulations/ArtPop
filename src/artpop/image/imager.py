@@ -24,18 +24,21 @@ __all__ = ['IdealObservation', 'ArtObservation', 'IdealImager', 'ArtImager']
 class BaseObservation(metaclass=abc.ABCMeta):
 
     def to_pickle(self, file_name):
+        """Pickle observation object."""
         pkl_file = open(file_name, 'wb')
         pickle.dump(self, pkl_file)
         pkl_file.close()
 
     @staticmethod
     def from_pickle(file_name):
+        """Load pickle of observation object."""
         pkl_file = open(file_name, 'rb')
         data = pickle.load(pkl_file)
         pkl_file.close()
         return data
 
     def copy(self):
+        """Create deep copy of observation object."""
         return deepcopy(self)
 
 
@@ -74,18 +77,7 @@ def fnu_from_AB_mag(mag):
 
 
 class Imager(metaclass=abc.ABCMeta):
-    """
-    Base class for Imager objects.
-
-    Parameters
-    ----------
-    phot_system : str or list-like
-        Name of the photometric system(s).
-    """
-
-    def __init__(self, phot_system):
-        self.phot_system = phot_system
-        self.filters = get_filter_names(phot_system)
+    """Base class for Imager objects."""
 
     def _check_source(self, source):
         """Verify that input object is a Source object."""
@@ -227,7 +219,6 @@ class IdealImager(Imager):
         zpt : float
             The magnitude zero point.
         """
-        self._check_bandpass(bandpass)
         self._check_source(source)
         flux = 10**(0.4 * (zpt - source.mags[bandpass]))
         image = self.inject_stars(source.x, source.y, flux, source.xy_dim)
@@ -240,6 +231,11 @@ class IdealImager(Imager):
 class ArtImager(Imager):
     """
     Imager for making fully artificial images.
+
+    .. note::
+        The conversion from magnitude to counts assumes the AB magnitude units.
+        If your magnitudes are in another system, you must first convert them
+        into AB magnitudes.
 
     Parameters
     ----------
@@ -263,11 +259,13 @@ class ArtImager(Imager):
 
     def __init__(self, phot_system, diameter=10, read_noise=0.0, efficiency=1,
                  random_state=None, **kwargs):
-        super(ArtImager, self).__init__(phot_system)
+
+        self.phot_system
         self.efficiency = efficiency
         self.read_noise = read_noise
         self.diameter = check_units(diameter, 'm')
         self.rng = check_random_state(random_state)
+        self.filters = get_filter_names(phot_system)
         self.filter_system = FilterSystem(self.phot_system, **kwargs)
 
     @property
