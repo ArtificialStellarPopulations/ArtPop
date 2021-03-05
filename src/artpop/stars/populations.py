@@ -318,10 +318,6 @@ class SSP(StellarPopulation):
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
-    imf : str, optional
-        The initial stellar mass function. Default is `'kroupa'`.
-    imf_kw : dict, optional
-        Optional keyword arguments for sampling the stellar mass function.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -330,6 +326,10 @@ class SSP(StellarPopulation):
     mag_limit_band : str, optional
         Bandpass of the limiting magnitude. You must give this parameter if
         you use the `mag_limit` parameter.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    imf_kw : dict, optional
+        Optional keyword arguments for sampling the stellar mass function.
     mass_tolerance : float, optional
         Tolerance in the fractional difference between the input mass and the
         final mass of the population. The parameter is only used when

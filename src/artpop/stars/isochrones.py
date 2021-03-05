@@ -534,7 +534,7 @@ class MistIsochrone(Isochrone):
             filters.extend(filt)
             _iso = self._fetch_iso(p)
             mags = [_iso[f].data for f in filt]
-            self._iso_full = append_fields(self.iso, filt, mags)
+            self._iso_full = append_fields(self._iso_full, filt, mags)
 
         super(MistIsochrone, self).__init__(
             mini = self._iso_full['initial_mass'],

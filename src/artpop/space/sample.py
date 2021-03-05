@@ -11,6 +11,13 @@ from ..log import logger
 __all__ = ['xy_from_grid', 'sersic_xy', 'plummer_xy', 'uniform_xy']
 
 
+def _check_offset(xy_dim, dx, dy):
+    """Check if center of source falls within image."""
+    center = np.array([xy_dim[0]//2 + dx, xy_dim[1]//2 + dy])
+    if np.any(center <= 0.) or np.any(center >= xy_dim):
+        raise Exception(f'Center = {center} falls outside of the image.')
+
+
 def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
                  dx=0, dy=0, random_state=None):
     """
@@ -47,10 +54,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
         mock image are masked.
     """
     xy_dim = check_xy_dim(xy_dim)
-
-    center = np.array([xy_dim[0]//2 + dx, xy_dim[1]//2 + dy])
-    if np.any(center <= 0.) or np.any(center >= xy_dim):
-        raise Exception(f'Center = {center} falls outside of the image.')
+    _check_offset(xy_dim, dx, dy)
 
     if sample_dim is None:
         sample_dim = max(xy_dim)
@@ -157,6 +161,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         raise Exception('Sersic index n must be greater than zero.')
 
     xy_dim = check_xy_dim(xy_dim)
+    _check_offset(xy_dim, dx, dy)
 
     r_eff = check_units(r_eff, 'kpc').to('Mpc').value
     theta = check_units(theta, 'deg').to('radian').value
@@ -219,13 +224,14 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
         mock image are masked.
     """
     xy_dim = check_xy_dim(xy_dim)
-    rng = check_random_state(random_state)
+    _check_offset(xy_dim, dx, dy)
 
     scale_radius = check_units(scale_radius, 'kpc').to('Mpc').value
     distance = check_units(distance, 'Mpc').to('Mpc').value
     r_sky = np.arctan2(scale_radius, distance) * u.radian.to('arcsec')
     pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
+    rng = check_random_state(random_state)
     s = rng.random(size=int(num_stars))
     r = u.arcsec * r_sky / np.sqrt(s**(-2 / 3) - 1)
     r = r.to('pixel', u.pixel_scale(pixel_scale)).value
@@ -274,9 +280,9 @@ def uniform_xy(num_stars, xy_dim, random_state=None):
     xy : `~numpy.array`
         xy pixel positions.
     """
+    num_stars = int(num_stars)
     xy_dim = check_xy_dim(xy_dim)
     rng = check_random_state(random_state)
-    num_stars = int(num_stars)
     xy = np.vstack([rng.uniform(0, xy_dim[0], num_stars),
                     rng.uniform(0, xy_dim[1], num_stars)]).T
     return xy

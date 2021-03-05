@@ -193,7 +193,7 @@ class IdealImager(Imager):
             if source.smooth_model is None:
                 image = image
             else:
-                mag = source.pop.mag_integrated_component(bandpass)
+                mag = source.sp.mag_integrated_component(bandpass)
                 amp, amp_image, name = source.mag_to_image_amplitude(mag, zpt)
                 setattr(source.smooth_model, name, amp_image)
                 yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
@@ -404,7 +404,7 @@ class ArtImager(Imager):
             if source.smooth_model is None:
                 image = image
             else:
-                mag = source.pop.mag_integrated_component(bandpass)
+                mag = source.sp.mag_integrated_component(bandpass)
                 amp, _, name = source.mag_to_image_amplitude(mag, zpt)
                 amp_counts = self.sb_to_counts_per_pixel(
                     amp, bandpass, exptime, source.pixel_scale)
