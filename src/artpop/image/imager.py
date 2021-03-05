@@ -2,7 +2,7 @@
 import os
 import abc
 import pickle
-from collections import namedtuple
+from copy import deepcopy
 
 # Third-party
 import numpy as np
@@ -35,9 +35,12 @@ class BaseObservation(metaclass=abc.ABCMeta):
         pkl_file.close()
         return data
 
+    def copy(self):
+        return deepcopy(self)
 
-# return object for the ideal imager
+
 class IdealObservation(BaseObservation):
+    """Return object for the ideal imager."""
 
     def __init__(self, image, zpt, bandpass):
         self.image = image
@@ -45,12 +48,11 @@ class IdealObservation(BaseObservation):
         self.bandpass = bandpass
 
 
-# return object for the artificial imager
 class ArtObservation(BaseObservation):
+    """Return object for the artificial imager."""
 
     def __init__(self, raw_counts, src_counts, sky_counts, image,
                  var_image, calibration, zpt, bandpass, exptime):
-
         self.raw_counts = raw_counts
         self.src_counts = src_counts
         self.sky_counts = sky_counts
@@ -167,11 +169,31 @@ class IdealImager(Imager):
     """Ideal imager for making noise-free images."""
 
     def inject_smooth_model(self, image, source, bandpass, zpt):
+        """
+        Inject smooth component of the star system into image if it exists.
+
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            The artificial image.
+        source : `~artpop.source.Source`
+            The artificial source.
+        bandpass : str
+            Observational bandpass of the mock observation.
+        zpt : float
+            Photometric zero point.
+
+        Returns
+        -------
+        image : `~numpy.ndarray`
+            The artificial image with the smooth model injected into it. If no
+            smooth model exists, the original image will be returned.
+        """
         if hasattr(source, 'smooth_model'):
             if source.smooth_model is None:
                 image = image
             else:
-                mag = source.ssp.mag_integrated_component(bandpass)
+                mag = source.pop.mag_integrated_component(bandpass)
                 amp, amp_image, name = source.mag_to_image_amplitude(mag, zpt)
                 setattr(source.smooth_model, name, amp_image)
                 yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
@@ -195,10 +217,6 @@ class IdealImager(Imager):
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
             The magnitude zero point of the mock image.
-
-        .. note::
-            The returned parameters are stored as attributes of a
-            `~collections.namedtuple` object.
 
         Returns
         -------
@@ -232,8 +250,8 @@ class ArtImager(Imager):
         will be assumed to be meters.
     read_noise : float, optional
         RMS of Gaussian read noise. Set to zero by default.
-    throughput : float, optional
-        Throughput factor (e.g., to account for QE). Set to one by default.
+    efficiency : float, optional
+        efficiency factor (e.g., to account for QE). Set to one by default.
         Note the filter response curves used by MIST already include
         atmospheric transmission if applicable.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
@@ -243,10 +261,10 @@ class ArtImager(Imager):
         return it. Otherwise raise ``ValueError``.
     """
 
-    def __init__(self, phot_system, diameter=10, read_noise=0.0, throughput=1,
+    def __init__(self, phot_system, diameter=10, read_noise=0.0, efficiency=1,
                  random_state=None, **kwargs):
         super(ArtImager, self).__init__(phot_system)
-        self.throughput = throughput
+        self.efficiency = efficiency
         self.read_noise = read_noise
         self.diameter = check_units(diameter, 'm')
         self.rng = check_random_state(random_state)
@@ -286,7 +304,7 @@ class ArtImager(Imager):
         counts = photon_flux * self.area.to('cm2') * exptime.to('s')
         counts = counts.decompose()
         assert counts.unit == u.dimensionless_unscaled
-        counts *= self.throughput
+        counts *= self.efficiency
         return counts.value
 
     def sb_to_counts_per_pixel(self, sb, bandpass, exptime, pixel_scale):
@@ -326,7 +344,7 @@ class ArtImager(Imager):
         counts_per_pixel = photon_flux_per_sq_pixel * exptime.to('s')
         counts_per_pixel *= self.area.to('cm2') * u.pixel**2
         assert counts_per_pixel.unit == u.dimensionless_unscaled
-        counts_per_pixel *= self.throughput
+        counts_per_pixel *= self.efficiency
         return counts_per_pixel.value
 
     def calibration(self, bandpass, exptime, zpt=27.0):
@@ -359,12 +377,34 @@ class ArtImager(Imager):
         return cali_factor
 
     def inject_smooth_model(self, image, source, bandpass, exptime, zpt):
+        """
+        Inject smooth component of the star system into image if it exists.
+
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            The artificial image.
+        source : `~artpop.source.Source`
+            The artificial source.
+        bandpass : str
+            Observational bandpass of the mock observation.
+        exptime : float or `~astropy.units.Quantity`
+            Exposure time. If `float` is given, the units are assumed to
+            be `~astropy.units.second`.
+        zpt : float
+            Photometric zero point.
+
+        Returns
+        -------
+        image : `~numpy.ndarray`
+            The artificial image with the smooth model injected into it. If no
+            smooth model exists, the original image will be returned.
+        """
         if hasattr(source, 'smooth_model'):
             if source.smooth_model is None:
                 image = image
             else:
-                flux = np.sum(10**(0.4 * (zpt - source.smooth_mags[bandpass])))
-                mag = zpt - 2.5 * np.log10(flux)
+                mag = source.pop.mag_integrated_component(bandpass)
                 amp, _, name = source.mag_to_image_amplitude(mag, zpt)
                 amp_counts = self.sb_to_counts_per_pixel(
                     amp, bandpass, exptime, source.pixel_scale)

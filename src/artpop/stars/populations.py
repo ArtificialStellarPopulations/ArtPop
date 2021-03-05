@@ -59,7 +59,8 @@ class StellarPopulation(metaclass=abc.ABCMeta):
     ----------
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
-        to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
+        to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`
+        (i.e., the mags are in absolute units).
     imf : str, optional
         The initial stellar mass function. Default is `'kroupa'`.
     """
@@ -155,6 +156,21 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         return mags
 
     def mag_integrated_component(self, bandpass):
+        """
+        Get the magnitude of the integrated component of the population if
+        it exists.
+
+        Parameter
+        ---------
+        bandpass : str
+            Filter of observation. Must be a filter in the given
+            photometric system(s).
+
+        Returns
+        -------
+        mag : float
+            The integrated magnitude if it exists. Otherwise None is returned.
+        """
         if hasattr(self, 'integrated_abs_mags'):
             mag = self.integrated_abs_mags[bandpass] + self.dist_mod
         else:
@@ -284,7 +300,45 @@ class StellarPopulation(metaclass=abc.ABCMeta):
 
 class SSP(StellarPopulation):
     """
-    Generic Simple Stellar Population.
+    Generic Simple Stellar Population (SSP).
+
+    .. note::
+        You must give `total_mass` *or* `num_stars`.
+
+    Parameters
+    ----------
+    isochrone : `~artpop.stars.Isochrone`
+        Isochrone object.
+    num_stars : int or `None`
+        Number of stars in source. If `None`, then must give `total_mass`.
+    total_mass : float or `None`
+        Stellar mass of the source. If `None`, then must give `num_stars`. This
+        mass accounts for stellar remnants, so the actual sampled mass will be
+        less than the given value.
+    distance : float or `~astropy.units.Quantity`, optional
+        Distance to source. If float is given, the units are assumed
+        to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
+    imf : str, optional
+        The initial stellar mass function. Default is `'kroupa'`.
+    imf_kw : dict, optional
+        Optional keyword arguments for sampling the stellar mass function.
+    mag_limit : float, optional
+        Only sample individual stars that are brighter than this magnitude. All
+        fainter stars will be combined into an integrated component. Otherwise,
+        all stars in the population will be sampled. You must also give the
+        `mag_limit_band` if you use this parameter.
+    mag_limit_band : str, optional
+        Bandpass of the limiting magnitude. You must give this parameter if
+        you use the `mag_limit` parameter.
+    mass_tolerance : float, optional
+        Tolerance in the fractional difference between the input mass and the
+        final mass of the population. The parameter is only used when
+        `total_mass` is given.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
+        If `None`, return the `~numpy.random.RandomState` singleton used by
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
     """
 
     def __init__(self, isochrone, num_stars=None, total_mass=None,
@@ -314,16 +368,21 @@ class SSP(StellarPopulation):
             give `num_stars`. Note this mass includes stellar remnants, so
             the sampled stellar mass will less than this total.
         """
+
+        # get isochrone object and info
         m_min, m_max = self.isochrone.m_min, self.isochrone.m_max
         imf_kw = self.imf_kw.copy()
         iso = self.isochrone
         remnants_factor = self._remnants_factor()
         imfint = IMFIntegrator(self.imf, m_min=m_min, m_max=m_max)
 
+        # calculate the fraction of stars we will sample
         m_lim, f_num_sampled, f_mass_sampled = self.sample_fraction(
             self.mag_limit,
             self.mag_limit_band
         )
+
+        # the limiting mass is min mass if 100% of stars will be sampled
         self.has_integrated_component = m_lim != m_min
 
         m_min = m_lim
@@ -332,70 +391,133 @@ class SSP(StellarPopulation):
         self.frac_mass_sampled = f_mass_sampled
 
         if num_stars is not None:
+
+            # sample imf
             num_stars_sample = int(num_stars * f_num_sampled)
             self.initial_masses = sample_imf(
                 num_stars_sample, m_min=m_min, m_max=m_max, imf=self.imf,
                 random_state=self.rng, imf_kw=imf_kw)
+
+            # star masses are interpolated from "actual" mass
             self.star_masses = iso.interpolate('mact', self.initial_masses)
+
+            # will be < num_stars if f_num_sampled < 1.0.
             self.num_stars_integrated = int(num_stars - len(self.star_masses))
             self.sampled_mass = self.star_masses.sum()
+
         elif total_mass is not None:
+
+            # calculate fraction of mass that remains after mass loss
             mass_loss = iso.ssp_surviving_mass(
                 imf=self.imf, m_min=iso.m_min, m_max=iso.m_max,
                 add_remnants=False)
+
+            # we sample less mass than total_mass to account for
+            # stellar remnants and the sample fraction
             sampled_mass = total_mass * remnants_factor * f_mass_sampled
+
+            # we increase the sampled mass to account for mass loss
             sampled_mass /= mass_loss
+
+            # sample initial masses
             mean_mass = imfint.m_integrate(m_min, m_max)
             mean_mass /= imfint.integrate(m_min, m_max)
             num_stars_iter = int(mass_tolerance * sampled_mass / mean_mass)
             self.initial_masses = build_galaxy(
                 sampled_mass, m_min=m_min, m_max=m_max, imf=self.imf,
                 random_state=self.rng, num_stars_iter=num_stars_iter, **imf_kw)
+
+            # star masses are interpolated from "actual" mass
             self.star_masses = iso.interpolate('mact', self.initial_masses)
             self.sampled_mass = self.star_masses.sum()
+
+            # calculate approximate number of stars in integrated component
             factor = (1 - f_num_sampled) / f_num_sampled
             self.num_stars_integrated = int(self.num_stars * factor)
+
         else:
             raise Exception('you must give total mass *or* number of stars')
 
-        self.pop_labels = np.ones(len(self.star_masses), dtype=int)
         self.abs_mags = {}
         for filt in self.filters:
             self.abs_mags[filt] = iso.interpolate(filt, self.initial_masses)
 
+        # update masses and mags if there is an integrated component
         if self.has_integrated_component:
+
+            # find evolved stars that are fainter than mag_limit
             sampled_mags = self.abs_mags[self.mag_limit_band] + self.dist_mod
             evolved_faint = sampled_mags > self.mag_limit
+
             evolved_mags = {}
             for filt in self.filters:
                 evolved_mags[filt] = self.abs_mags[filt][evolved_faint]
                 self.abs_mags[filt] = self.abs_mags[filt][~evolved_faint]
+
+            # calculate evolved mass and update integrated star count
             evolved_mass = self.star_masses[evolved_faint].sum()
+            self.num_stars_integrated += evolved_faint.sum()
+
+            # update initial and sampled masses
+            self.initial_masses = self.initial_masses[~evolved_faint]
             self.star_masses = self.star_masses[~evolved_faint]
             self.sampled_mass = self.star_masses.sum()
-            self.num_stars_integrated += evolved_faint.sum()
-            w = iso.imf_weights(self.imf, m_max_norm=m_max,
-                                norm_type='number')
+
+            # calculate normalized IMF weights
+            w = iso.imf_weights(self.imf, m_max_norm=m_max, norm_type='number')
             _, arg = iso.nearest_mini(m_lim)
-            self.integrated_abs_mags = {}
-            self._integrated_log_lumlum = {}
+
+            # update total mass
             num_stars = self.num_stars_integrated + self.num_stars
             _mass = num_stars * np.sum(iso.mact[:arg] * w[:arg])
             _mass += evolved_mass
             self.total_mass = (self.sampled_mass + _mass) / remnants_factor
+
+            # updated integrated absolute magnitudes and luminosity variances
+            self.integrated_abs_mags = {}
+            self._integrated_log_lumlum = {}
             for filt in iso.filters:
                 mag = iso.mag_table[filt]
-                lum = num_stars * np.sum(10**(-0.4 * mag[: arg]) * w[: arg])
-                lum += np.sum(10**(-0.4 * evolved_mags[filt]))
-                self.integrated_abs_mags[filt] = -2.5 * np.log10(lum)
-                lumlum = num_stars * np.sum(10**(-0.8 * mag[: arg]) * w[: arg])
-                lumlum += np.sum(10**(-0.8 * evolved_mags[filt]))
+                flux  = num_stars * np.sum(10**(-0.4 * mag[: arg]) * w[: arg])
+                flux += np.sum(10**(-0.4 * evolved_mags[filt]))
+                self.integrated_abs_mags[filt] = -2.5 * np.log10(flux)
+                ff = num_stars * np.sum(10**(-0.8 * mag[: arg]) * w[: arg])
+                ff += np.sum(10**(-0.8 * evolved_mags[filt]))
                 log_dddd = 4 * np.log10((10 * u.pc).to('cm').value)
-                self._integrated_log_lumlum[filt] = np.log10(lumlum) + log_dddd
+                self._integrated_log_lumlum[filt] = np.log10(ff) + log_dddd
+
         else:
+            # calculate total_mass with stellar remnants
             self.total_mass = self.sampled_mass / remnants_factor
 
+        self.live_star_mass = self.total_mass * remnants_factor
+        self.ssp_labels = np.ones(len(self.star_masses), dtype=int)
+
+        for attr in ['eep', 'log_L', 'log_Teff']:
+            if hasattr(iso, attr):
+                setattr(self, attr, iso.interpolate(attr, self.initial_masses))
+
     def sample_fraction(self, mag_limit, mag_limit_band):
+        """
+        Calculate the fraction of stars by mass and number that will be
+        sampled with the give limiting magnitude.
+
+        Parameters
+        ----------
+        mag_limit : float, optional
+            Only sample individual stars that are brighter than this magnitude.
+        mag_limit_band : str, optional
+            Bandpass of the limiting magnitude.
+
+        Returns
+        -------
+        m_lim : float
+            Initial stellar mass associated with `mag_limit`.
+        f_num_sampled : float
+            Fraction of stars that will be sampled by number.
+        f_mass_sampled : float
+            Fraction of stars that will be sampled by mass.
+        """
         iso = self.isochrone
         imfint = IMFIntegrator(self.imf, iso.m_min, iso.m_max)
         m_lim = iso.m_min
@@ -415,7 +537,7 @@ class SSP(StellarPopulation):
         return m_lim, f_num_sampled, f_mass_sampled
 
     def __add__(self, ssp):
-        assert type(self) == type(ssp), 'SSPs must be of same type.'
+        assert StellarPopulation in ssp.__class__.__mro__, 'invalid type(s)'
         assert self.filters == ssp.filters, 'must have same filters'
         assert self.distance == ssp.distance, 'SSPs must have same distance'
         new = deepcopy(self)
@@ -426,45 +548,78 @@ class SSP(StellarPopulation):
         else:
             new.isochrone.extend(ssp.isochrone)
 
-        # Loop over optional attributes
-        # Both SSPs must have the arrtibute to add them
-        for attr in ['eep', 'log_L', 'log_Teff']:
-            new_attr = getattr(new, attr)
-            ssp_attr = getattr(ssp, attr)
-            if new_attr is not None:
-                if ssp_attr is not None:
-                    setattr(new, attr, np.concatenate([new_attr, ssp_attr]))
-                else:
-                    setattr(new, attr, None)
+        if not hasattr(new, 'ssp_total_masses'):
+            new.ssp_total_masses = [new.total_mass]
+        if not hasattr(ssp, 'ssp_total_masses'):
+            ssp.ssp_total_masses = [ssp.total_mass]
+        new.ssp_total_masses.extend(ssp.ssp_total_masses)
+
+        if not hasattr(new, 'ssp_total_num_stars'):
+            _n = new.num_stars + new.num_stars_integrated
+            new.ssp_total_num_stars = [_n]
+        if not hasattr(ssp, 'ssp_total_num_stars'):
+            _n = ssp.num_stars + ssp.num_stars_integrated
+            ssp.ssp_total_num_stars = [_n]
+        new.ssp_total_num_stars.extend(ssp.ssp_total_num_stars)
 
         new.total_mass = new.total_mass + ssp.total_mass
         new.sampled_mass = new.sampled_mass + ssp.sampled_mass
+        new.live_star_mass = new.live_star_mass + ssp.live_star_mass
+        new.frac_mass_sampled = new.sampled_mass / new.live_star_mass
+
+        new_num_stars_total = new.num_stars + new.num_stars_integrated
+        ssp_num_stars_total = ssp.num_stars + ssp.num_stars_integrated
+        total_num_stars = new_num_stars_total + ssp_num_stars_total
+        new.num_stars_integrated += ssp.num_stars_integrated
 
         new.initial_masses = np.concatenate(
             [new.initial_masses, ssp.initial_masses])
         new.star_masses = np.concatenate([new.star_masses, ssp.star_masses])
+        new.frac_num_sampled = new.num_stars / total_num_stars
+
+        new.ssp_num_fracs = []
+        new.ssp_mass_fracs = []
+        for n, m in zip(new.ssp_total_num_stars, new.ssp_total_masses):
+            new.ssp_num_fracs.append(n / total_num_stars)
+            new.ssp_mass_fracs.append(m / new.total_mass)
+
+        # Loop over optional attributes.
+        # Both SSPs must have the arrtibute to add them.
+        for attr in ['eep', 'log_L', 'log_Teff']:
+            if hasattr(new, attr) and hasattr(ssp, attr):
+                new_attr = getattr(new, attr)
+                ssp_attr = getattr(ssp, attr)
+                setattr(new, attr, np.concatenate([new_attr, ssp_attr]))
 
         new_label = np.ones(len(ssp.star_masses), dtype=int)
         new_label *= len(new.isochrone)
-        new.pop_labels = np.concatenate([new.pop_labels, new_label])
-        labels = np.unique(new.pop_labels)
-        pop_fracs = [(l==new.pop_labels).sum() / new.num_stars for l in labels]
-        new.pop_fracs = pop_fracs
+        new.ssp_labels = np.concatenate([new.ssp_labels, new_label])
 
         if hasattr(new, 'log_age'):
             if type(new.log_age) != list:
                 new.log_age = [new.log_age]
             new.log_age.append(ssp.log_age)
-            new.log_age_mean = np.average(new.log_age, weights=pop_fracs)
         if hasattr(new, 'feh'):
             if type(new.feh) != list:
                 new.feh = [new.feh]
             new.feh.append(ssp.feh)
-            new.feh_mean  = np.average(new.feh, weights=pop_fracs)
 
         for filt in new.filters:
             _mags = [new.abs_mags[filt], ssp.abs_mags[filt]]
             new.abs_mags[filt] = np.concatenate(_mags)
+            if new.has_integrated_component and ssp.has_integrated_component:
+                new_flux = 10**(-0.4 * new.integrated_abs_mags[filt])
+                ssp_flux = 10**(-0.4 * ssp.integrated_abs_mags[filt])
+                flux = new_flux + ssp_flux
+                new.integrated_abs_mags[filt] = -2.5 * np.log10(flux)
+                new_lumlum = 10**new._integrated_log_lumlum[filt]
+                ssp_lumlum = 10**ssp._integrated_log_lumlum[filt]
+                log_lumlum = np.log10(new_lumlum + ssp_lumlum)
+                new._integrated_log_lumlum[filt] = log_lumlum
+            elif ssp.has_integrated_component:
+                new.integrated_abs_magw[filt] = ssp.integrated_abs_mags[filt]
+                log_lumlum =  ssp._integrated_log_lumlum[filt]
+                new._integrated_log_lumlum[filt] = log_lumlum
 
         return CompositePopulation(new)
 
@@ -478,6 +633,9 @@ class MistSSP(SSP):
     """
     MIST Simple Stellar Population.
 
+    .. note::
+        You must give `total_mass` *or* `num_stars`.
+
     Parameters
     ----------
     log_age : float
@@ -489,10 +647,20 @@ class MistSSP(SSP):
     num_stars : int or `None`
         Number of stars in source. If `None`, then must give `total_mass`.
     total_mass : float or `None`
-        Stellar mass of the source. If `None`, then must give `num_stars`.
+        Stellar mass of the source. If `None`, then must give `num_stars`. This
+        mass accounts for stellar remnants, so the actual sampled mass will be
+        less than the given value.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
+    mag_limit : float, optional
+        Only sample individual stars that are brighter than this magnitude. All
+        fainter stars will be combined into an integrated component. Otherwise,
+        all stars in the population will be sampled. You must also give the
+        `mag_limit_band` if you use this parameter.
+    mag_limit_band : str, optional
+        Bandpass of the limiting magnitude. You must give this parameter if
+        you use the `mag_limit` parameter.
     imf : str, optional
         The initial stellar mass function. Default is `'kroupa'`.
     mist_path : str, optional
@@ -500,15 +668,15 @@ class MistSSP(SSP):
         path from the `MIST_PATH` environment variable.
     imf_kw : dict, optional
         Optional keyword arguments for sampling the stellar mass function.
+    mass_tolerance : float, optional
+        Tolerance in the fractional difference between the input mass and the
+        final mass of the population. The parameter is only used when
+        `total_mass` is given.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
         instance seeded with the `int`.  If `~numpy.random.RandomState`,
         return it. Otherwise raise ``ValueError``.
-
-    Notes
-    -----
-    You must give `total_mass` *or* `num_stars`.
     """
 
     phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
@@ -537,10 +705,6 @@ class MistSSP(SSP):
             mass_tolerance=mass_tolerance,
             random_state=random_state
         )
-
-        self.eep = _iso.interpolate('eep', self.initial_masses)
-        self.log_L = _iso.interpolate('log_L', self.initial_masses)
-        self.log_Teff = _iso.interpolate('log_Teff', self.initial_masses)
 
         self._r.update({'log(age/yr)': self.log_age,
                         '[Fe/H]': self.feh,
@@ -594,24 +758,23 @@ class MistSSP(SSP):
         return mask
 
 
-class CompositePopulation(StellarPopulation):
+class CompositePopulation(SSP):
     """
     Composite stellar populations.
     """
 
     def __init__(self, pop):
 
-        super(CompositePopulation, self).__init__(distance=pop.distance,
-                                                  imf=pop.imf,
-                                                  imf_kw=pop.imf_kw)
-
         for name, attr in pop.__dict__.items():
             setattr(self, name, attr)
 
     def __repr__(self):
+        num_fracs = self.ssp_num_fracs
+        mass_fracs = self.ssp_mass_fracs
         r = {'N_pops': self.num_pops,
              'M_star': f'{self.total_mass:.2e} M_sun',
-             'pop fractions': [f'{p * 100:.2f}%' for p in self.pop_fracs]}
+             'number fractions': [f'{p * 100:.2f}%' for p in num_fracs],
+             'mass fractions': [f'{p * 100:.2f}%' for p in mass_fracs]}
         if hasattr(self, 'log_age'):
             r['log(age/yr)'] = self.log_age
         if hasattr(self, 'feh'):

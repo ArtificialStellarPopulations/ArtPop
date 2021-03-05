@@ -7,13 +7,14 @@ from numpy.lib.recfunctions import append_fields
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from astropy.table import Table
+from astropy import units as u
 
 # Project
 from ._read_mist_models import IsoCmdReader, IsoReader
 from .imf import imf_dict, IMFIntegrator
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
-from ..util import MIST_PATH
+from ..util import MIST_PATH, check_units
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
@@ -142,6 +143,25 @@ class Isochrone(object):
         return y_interp
 
     def mag_to_mass(self, mag, bandpass):
+        """
+        Interpolate isochrone to calculate initial stellar masses that have
+        the given magnitude. Since more than one mass can have the same
+        magnitude (from stars being in different phases of stellar evolution),
+        we step through each isochrone and check if the given magnitude falls
+        between two bins, in which case we interpolate the associated mass.
+
+        Parameters
+        ----------
+        mag : float
+            Magnitude to be converted in to stellar mass(es).
+        bandpass : str
+            Photometric bandpass of the `mag`.
+
+        Returns
+        -------
+        mass_interp : `~numpy.ndarray`
+            Interpolated mass(es) associated with `mag`.
+        """
         y = self.mini
         x = self.mag_table[bandpass]
 
@@ -172,7 +192,7 @@ class Isochrone(object):
         return mass_interp
 
     def calculate_mag_limit(self, imf, bandpass, frac_mass_sampled=0.2,
-                            frac_num_sampled=None):
+                            frac_num_sampled=None, distance=10*u.pc):
         """
         Calculate the limiting faint magnitude to sample a given fraction
         of mass or number of a stellar population. This is used for when you
@@ -191,6 +211,10 @@ class Isochrone(object):
         frac_num_sampled: float, optional
             Fraction of stars by number that will be sampled if only stars that
             are brighter than the magnitude limit are sampled.
+        distance : float or `~astropy.units.Quantity`, optional
+            Distance to source. If float is given, the units are assumed
+            to be `~astropy.units.Mpc`. Default distance is 10
+            `~astropy.units.pc` (i.e., the mags are in absolute units).
 
         Returns
         -------
@@ -200,7 +224,7 @@ class Isochrone(object):
             Mass of stars (in solar masses) that have the limiting magnitude.
         """
         mfint = IMFIntegrator(imf, self.m_min, self.m_max)
-        m_vals = np.linspace(self.m_min, self.m_max, 500)
+        m_vals = np.logspace(np.log10(self.m_min), np.log10(self.m_max), 500)
         err_msg = 'You must give a fraction such that 0 < fraction <= 1.'
         if frac_mass_sampled is not None:
             assert frac_mass_sampled > 0 and frac_mass_sampled <= 1, err_msg
@@ -213,8 +237,10 @@ class Isochrone(object):
         else:
             msg = 'You must give either frac_mass_sampled or frac_num_sampled.'
             raise Exception(msg)
-        mass_limit = interp1d(m_vals, fracs)([frac_interp])[0]
+        d = check_units(distance, 'Mpc')
+        mass_limit = interp1d(fracs, m_vals)([frac_interp])[0]
         mag_limit = self.interpolate(bandpass, [mass_limit])[0]
+        mag_limit = mag_limit + 5 * np.log10(d.to('pc').value) - 5
         return mag_limit, mass_limit
 
     def nearest_mini(self, m):
