@@ -26,7 +26,6 @@ phot_system_list = [
 ]
 
 
-
 class FilterSystem(object):
     """
     Class for calculating filter parameters from throughput curves.
