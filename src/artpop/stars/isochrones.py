@@ -23,9 +23,9 @@ __all__ = ['fetch_mist_iso_cmd', 'Isochrone', 'MISTIsochrone']
 
 class Isochrone(object):
     """
-    Class for fetching and storing generic isochrones. It also has several
-    methods for calculating IMF-weighted properties of a stellar population
-    with the given age an metallicity.
+    Class for storing generic isochrones. It also has methods for calculating
+    IMF-weighted properties of a simple stellar population with the given
+    age and metallicity.
 
     Parameters
     ----------
@@ -48,6 +48,8 @@ class Isochrone(object):
                  log_Teff=None):
         self.mini = np.asarray(mini)
         self.mact = np.asarray(mact)
+        if (np.diff(self.mini) < 0).sum() > 0:
+            raise Exception('Initial masses must be monotonically increasing.')
         self.eep = None if eep is None else np.asarray(eep)
         self.log_L = None if log_L is None else np.asarray(log_L)
         self.log_Teff = None if log_Teff is None else np.asarray(log_Teff)
@@ -374,10 +376,11 @@ class Isochrone(object):
                            add_remnants=True, mlim_bh=40.0, mlim_ns=8.5):
         """
         Calculate IMF-weighted mass normalized such that 1 solar mass is
-        formed by ``log_age``.
+        formed by the age of the population.
 
         The initial-mass-dependent remnant formulae are taken
-        from Renzini & Ciotti 1993.
+        from `Renzini & Ciotti 1993
+        <https://ui.adsabs.harvard.edu/abs/1993ApJ...416L..49R/abstract>`_.
 
         Parameters
         ----------
