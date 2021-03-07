@@ -14,10 +14,10 @@ from ..util import check_random_state, check_units, MIST_PATH
 from ..log import logger
 from ..filters import *
 from .imf import sample_imf, build_galaxy, imf_dict, IMFIntegrator
-from .isochrones import MistIsochrone
+from .isochrones import MISTIsochrone
 
 
-__all__ = ['SSP', 'MistSSP', 'constant_sb_stars_per_pix']
+__all__ = ['SSP', 'MISTSSP', 'constant_sb_stars_per_pix']
 
 
 class StellarPopulation(metaclass=abc.ABCMeta):
@@ -602,7 +602,7 @@ class SSP(StellarPopulation):
         return t + '\n'.join(r)
 
 
-class MistSSP(SSP):
+class MISTSSP(SSP):
     """
     MIST Simple Stellar Population.
 
@@ -664,9 +664,9 @@ class MistSSP(SSP):
         self.log_age = log_age
         self.phot_system = phot_system
         self.mist_path = mist_path
-        _iso = MistIsochrone(log_age, feh, phot_system,  mist_path, **kwargs)
+        _iso = MISTIsochrone(log_age, feh, phot_system,  mist_path, **kwargs)
 
-        super(MistSSP, self).__init__(
+        super(MISTSSP, self).__init__(
             isochrone=_iso,
             num_stars=num_stars,
             total_mass=total_mass,
@@ -683,7 +683,7 @@ class MistSSP(SSP):
                         '[Fe/H]': self.feh,
                         'photometric system': self.phot_system})
 
-    def get_phase_mask(self, phase):
+    def select_phase(self, phase):
         """
         Generate stellar evolutionary phase mask. The mask will be `True` for
         sources that are in the give phase according to the MIST EEPs.

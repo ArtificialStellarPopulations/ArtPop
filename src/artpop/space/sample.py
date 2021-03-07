@@ -104,7 +104,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
 
 
 def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
-              pixel_scale=0.2, num_r_eff=10, dx=0, dy=0, random_state=None):
+              pixel_scale, num_r_eff=10, dx=0, dy=0, random_state=None):
     """
     Sample xy positions from a two-dimensional Sersic distribution.
 
@@ -127,14 +127,15 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         Rotation angle, counterclockwise from the positive x-axis. If a float
         is given, the units are assumed to be `degree`.
     ellip : float
-        Ellipticity.
+        Ellipticity defined as `1 - b/a`, where `b` is the semi-minor axis
+        and `a` is the semi-major axis.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`.
     xy_dim : list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
-    pixel_scale : float or `~astropy.units.Quantity`, optional
+    pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
     num_r_eff : float, optional
@@ -185,7 +186,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     return xy
 
 
-def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
+def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
                dx=0, dy=0, random_state=None):
     """
     Sample xy positions from a two-dimensional Plummer distributions using
@@ -204,7 +205,7 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
     xy_dim : int or list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
-    pixel_scale : float or `~astropy.units.Quantity`, optional
+    pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
     dx : float, optional

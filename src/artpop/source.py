@@ -9,7 +9,7 @@ from astropy.modeling.models import Sersic2D
 from scipy.special import gammaincinv, gamma
 
 # Project
-from .stars import SSP, MistSSP, MistIsochrone, constant_sb_stars_per_pix
+from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
 from .util import check_units, check_xy_dim, MIST_PATH
 
@@ -17,11 +17,11 @@ from .util import check_units, check_xy_dim, MIST_PATH
 __all__ = [
     'Source',
     'SersicSP',
-    'MistSersicSSP',
+    'MISTSersicSSP',
     'PlummerSP',
-    'MistPlummerSSP',
+    'MISTPlummerSSP',
     'UniformSSP',
-    'MistUniformSSP',
+    'MISTUniformSSP',
 ]
 
 
@@ -80,6 +80,7 @@ class Source(object):
         return len(self.x)
 
     def copy(self):
+        """Create deep copy of source object."""
         return deepcopy(self)
 
     def __add__(self, src):
@@ -210,11 +211,11 @@ class SersicSP(Source):
         return mu_e, amplitude, param_name
 
 
-class MistSersicSSP(SersicSP):
+class MISTSersicSSP(SersicSP):
     """
     MIST simple stellar population with a Sersic spatial distribution. This
     is a convenience class that combines `~artpop.space.sersic_xy` and
-    `~artpop.stars.MistSSP` to make a `~artpop.source.Source` object.
+    `~artpop.stars.MISTSSP` to make a `~artpop.source.Source` object.
 
     .. note::
         You must give `total_mass` *or* `num_stars`.
@@ -236,7 +237,8 @@ class MistSersicSSP(SersicSP):
         Rotation angle, counterclockwise from the positive x-axis. If a float
         is given, the units are assumed to be `degree`.
     ellip : float
-        Ellipticity.
+        Ellipticity defined as `1 - b/a`, where `b` is the semi-minor axis
+        and `a` is the semi-major axis.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
         to be `Mpc`.
@@ -299,9 +301,9 @@ class MistSersicSSP(SersicSP):
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
                            mass_tolerance=mass_tolerance)
 
-        ssp = MistSSP(**self.ssp_kw)
+        ssp = MISTSSP(**self.ssp_kw)
 
-        super(MistSersicSSP, self).__init__(
+        super(MISTSersicSSP, self).__init__(
             sp=ssp, r_eff=r_eff, n=n, theta=theta, ellip=ellip, xy_dim=xy_dim,
             pixel_scale=pixel_scale, num_r_eff=num_r_eff, dx=dx, dy=dy)
 
@@ -391,7 +393,7 @@ class PlummerSP(Source):
         return mu_0, amplitude, param_name
 
 
-class MistPlummerSSP(PlummerSP):
+class MISTPlummerSSP(PlummerSP):
     """
     MIST simple stellar population with a Plummer spatial distribution.
 
@@ -467,9 +469,9 @@ class MistPlummerSSP(PlummerSP):
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
                            mass_tolerance=mass_tolerance)
 
-        ssp = MistSSP(**self.ssp_kw)
+        ssp = MISTSSP(**self.ssp_kw)
 
-        super(MistPlummerSSP, self).__init__(
+        super(MISTPlummerSSP, self).__init__(
             sp=ssp, scale_radius=scale_radius, xy_dim=xy_dim,
             pixel_scale=pixel_scale, dx=dx, dy=dy)
 
@@ -580,7 +582,7 @@ class UniformSSP(Source):
         return mu, amplitude, param_name
 
 
-class MistUniformSSP(UniformSSP):
+class MISTUniformSSP(UniformSSP):
     """
     MIST simple stellar population with a uniform spatial distribution.
 
@@ -641,10 +643,10 @@ class MistUniformSSP(UniformSSP):
                            mist_path=mist_path)
         self.iso_kw.update(kwargs)
 
-        iso = MistIsochrone(**self.iso_kw)
+        iso = MISTIsochrone(**self.iso_kw)
 
-        super(MistUniformSSP, self).__init__(
+        super(MISTUniformSSP, self).__init__(
             isochrone=iso, distance=distance, xy_dim=xy_dim, sb=sb,
             sb_band=sb_band, mag_limit=mag_limit,
             mag_limit_band=mag_limit_band, pixel_scale=pixel_scale,
-            imf=imf, imf_kw=imf_kw, ssp_kw={}, random_state=random_state)
+            imf=imf, imf_kw=imf_kw, ssp_kw=ssp_kw, random_state=random_state)

@@ -6,8 +6,10 @@ from copy import deepcopy
 
 # Third-party
 import numpy as np
-from astropy import units as u
+from astropy.io import fits
 from astropy import constants
+from astropy import units as u
+from astropy.table import Table
 from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
 
@@ -36,6 +38,21 @@ class BaseObservation(metaclass=abc.ABCMeta):
         data = pickle.load(pkl_file)
         pkl_file.close()
         return data
+
+    def to_fits(self, file_name, overwrite=True, image_type='image'):
+        """
+        Write image to fits file.
+
+        Parameters
+        ----------
+        file_name : str
+            Name of fits file.
+        overwrite : str, optional
+            If True (default), overwrite the image if it exists.
+        image_type : str, optional
+            Attribute name of the image to be written.
+        """
+        fits.writeto(file_name, getattr(self, image_type), overwrite=overwrite)
 
     def copy(self):
         """Create deep copy of observation object."""
@@ -82,12 +99,12 @@ class Imager(metaclass=abc.ABCMeta):
     def _check_source(self, source):
         """Verify that input object is a Source object."""
         if Source not in source.__class__.__mro__:
-            raise Exception(f'{type(src)} is not a valid Source object')
+            raise Exception(f'{type(src)} is not a valid Source object.')
 
     def _check_bandpass(self, bandpass):
         """Verify bandpass is the loaded filter list."""
         if bandpass not in self.filters:
-            raise Exception(f'you do not seem to have {bandpass}-band mags')
+            raise Exception(f'{bandpass} filter properties were not provided.')
 
     def inject_stars(self, x, y, signal, xy_dim):
         """
@@ -239,17 +256,31 @@ class ArtImager(Imager):
 
     Parameters
     ----------
-    phot_system : str or list-like
-        Name of the photometric system(s).
+    phot_system : str or list-like, optional
+        Name of the photometric system(s). Use this option if you are using
+        magnitudes from one of the systems with pre-calculated filter
+        properties included with ArtPop. See `~artpop.phot_system_list`.
     diameter : float or `~astropy.units.Quantity`, optional
         Diameter of the telescope aperture. If a float is given, the units
         will be assumed to be meters.
     read_noise : float, optional
         RMS of Gaussian read noise. Set to zero by default.
     efficiency : float, optional
-        efficiency factor (e.g., to account for QE). Set to one by default.
-        Note the filter response curves used by MIST already include
-        atmospheric transmission if applicable.
+        Efficiency factor (e.g., to account for CCD efficiency, atmospheric
+        transmission, etc). It is set to one by default.
+    dlam : dict of floats or dict of ~astropy.units.Quantity`, optional
+        Dictionary containing the filter widths. Used for converting magnitudes
+        into counts. Filter names should be the keys and the widths the values.
+        If the wavelengths are given as floats, angstroms will be assumed.
+    lam_eff : dict of floats or dict of ~astropy.units.Quantity`, optional
+        Dictionary containing the filter effective wavelengths. Used for
+        converting magnitudes into counts. Filter names should be the keys
+        and the widths should be the values. If the wavelengths are given as
+        floats, angstroms will be assumed.
+    filter_system : `~artpop.FilterSystem`, optional
+        Filter system object with filter curves for the filters you use to
+        create artificial images. This object calculates `dlam` and `lam_eff`
+        for converting magnitudes into counts.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -257,16 +288,45 @@ class ArtImager(Imager):
         return it. Otherwise raise ``ValueError``.
     """
 
-    def __init__(self, phot_system, diameter=10, read_noise=0.0, efficiency=1,
-                 random_state=None, **kwargs):
+    def __init__(self, phot_system=None, diameter=10, read_noise=0.0,
+                 efficiency=1.0, dlam=None, lam_eff=None, filter_system=None,
+                 random_state=None):
 
-        self.phot_system
         self.efficiency = efficiency
         self.read_noise = read_noise
         self.diameter = check_units(diameter, 'm')
         self.rng = check_random_state(random_state)
-        self.filters = get_filter_names(phot_system)
-        self.filter_system = FilterSystem(self.phot_system, **kwargs)
+
+        self.dlam = {}
+        self.lam_eff = {}
+        if phot_system is not None:
+            self.phot_system = phot_system
+            self.filters = get_filter_names(phot_system)
+            prop_fn = os.path.join(data_dir, 'filter_properties.fits')
+            props = Table.read(prop_fn)
+            for filt in self.filters:
+                select = props['bandpass'] == filt
+                self.dlam[filt] = props[select]['dlam'][0]
+                self.lam_eff[filt] = props[select]['lam_eff'][0]
+        elif dlam is not None:
+            assert lam_eff is not None, 'must give both dlam and lam_eff'
+            self.filters = list(dlam.keys())
+            self.dlam = dlam
+            self.lam_eff = lam_eff
+        elif filter_system is not None:
+            assert type(filter_system) == FilterSystem
+            self.filter_system = filter_system
+            self.filters = filter_system.filter_names
+            for filt in self.filters:
+                self.dlam[filt] = filter_system.dlam(filt).value
+                self.lam_eff[filt] = filter_system.lam_eff(filt).value
+        else:
+            msg = 'must give phot_system or (dlam, lam_eff) or filter_system.'
+            raise Exception('In order to convert mags to counts, you ' + msg)
+
+        for filt in self.filters:
+            self.dlam[filt] = check_units(self.dlam[filt], 'angstrom')
+            self.lam_eff[filt] = check_units(self.lam_eff[filt], 'angstrom')
 
     @property
     def area(self):
@@ -296,8 +356,8 @@ class ArtImager(Imager):
         """
         exptime = check_units(exptime, 's')
         fnu = fnu_from_AB_mag(mags)
-        dlam = self.filter_system.dlam(bandpass)
-        lam_eff = self.filter_system.lam_eff(bandpass)
+        dlam = self.dlam[bandpass]
+        lam_eff = self.lam_eff[bandpass]
         photon_flux = (dlam / lam_eff) * fnu / constants.h.to('erg s')
         counts = photon_flux * self.area.to('cm2') * exptime.to('s')
         counts = counts.decompose()
@@ -329,8 +389,8 @@ class ArtImager(Imager):
             Counts per pixel associated with the given surface brightness.
         """
         exptime = check_units(exptime, 's')
-        dlam = self.filter_system.dlam(bandpass)
-        lam_eff = self.filter_system.lam_eff(bandpass)
+        dlam = self.dlam[bandpass]
+        lam_eff = self.lam_eff[bandpass]
         pixel_scale = pixel_scale.to('arcsec / pixel')
         E_lam = (constants.h * constants.c / lam_eff).decompose().to('erg')
         fnu_per_square_arcsec = fnu_from_AB_mag(sb) / u.arcsec**2
@@ -366,8 +426,7 @@ class ArtImager(Imager):
         cali_factor : float
             The calibration factor.
         """
-        fs = self.filter_system
-        dlam_over_lam = fs.dlam(bandpass) / fs.lam_eff(bandpass)
+        dlam_over_lam = self.dlam[bandpass] / self.lam_eff[bandpass]
         lam_factor = (dlam_over_lam / constants.h.cgs).value
         cali_factor = 10**(0.4 * zpt) * 10**(0.4 * mAB_0) / lam_factor
         cali_factor /= exptime.to('s').value
@@ -468,7 +527,8 @@ class ArtImager(Imager):
         else:
             sky_counts = 0
         counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
-        src_counts = self.inject_stars(source.x, source.y, counts, source.xy_dim)
+        src_counts = self.inject_stars(source.x, source.y,
+                                       counts, source.xy_dim)
         src_counts = self.inject_smooth_model(src_counts, source,
                                               bandpass, exptime, zpt)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)
@@ -492,5 +552,4 @@ class ArtImager(Imager):
             bandpass=bandpass,
             exptime=exptime
         )
-
         return observation

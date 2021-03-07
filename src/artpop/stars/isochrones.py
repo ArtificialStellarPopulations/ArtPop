@@ -18,47 +18,7 @@ from ..util import MIST_PATH, check_units
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
-__all__ = ['fetch_mist_iso_cmd', 'Isochrone', 'MistIsochrone']
-
-
-def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
-                       v_over_vcrit=0.4, version=1.2):
-    """
-    Fetch MIST isochrone grid.
-
-    Parameters
-    ----------
-    log_age : float
-        Logarithm base 10 of the simple stellar population age in years.
-    feh : float
-        Metallicity [Fe/H] of the simple stellar population.
-    phot_system : str
-        Name of the photometric system.
-    mist_path : str, optional
-        Path to MIST isochrone grids. Use this if you want to use a different
-        path from the `MIST_PATH` environment variable.
-    v_over_vcrit : float, optional
-        Rotation rate divided by the critical surface linear velocity. Current
-        options are 0.4 (default) and 0.0.
-    version : float, optional
-        MIST version number.
-
-    Returns
-    -------
-    iso_cmd : `~numpy.ndarray`
-        Structured ``numpy`` array with isochrones and stellar magnitudes.
-    """
-
-    v = f'{v_over_vcrit:.1f}'
-    ver = f'v{version:.1f}'
-    p = phot_str_helper[phot_system.lower()]
-    path = os.path.join(mist_path, 'MIST_' + ver + f'_vvcrit{v}_' + p)
-    sign = 'm' if feh < 0 else 'p'
-    fn = f'MIST_{ver}_feh_{sign}{abs(feh):.2f}_afe_p0.0_vvcrit{v}_{p}.iso.cmd'
-    fn = os.path.join(path, fn)
-    iso_cmd = IsoCmdReader(fn, verbose=False)
-    iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
-    return iso_cmd
+__all__ = ['fetch_mist_iso_cmd', 'Isochrone', 'MISTIsochrone']
 
 
 class Isochrone(object):
@@ -459,7 +419,47 @@ class Isochrone(object):
         return mass
 
 
-class MistIsochrone(Isochrone):
+def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
+                       v_over_vcrit=0.4, version=1.2):
+    """
+    Fetch MIST isochrone grid.
+
+    Parameters
+    ----------
+    log_age : float
+        Logarithm base 10 of the simple stellar population age in years.
+    feh : float
+        Metallicity [Fe/H] of the simple stellar population.
+    phot_system : str
+        Name of the photometric system.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different
+        path from the `MIST_PATH` environment variable.
+    v_over_vcrit : float, optional
+        Rotation rate divided by the critical surface linear velocity. Current
+        options are 0.4 (default) and 0.0.
+    version : float, optional
+        MIST version number.
+
+    Returns
+    -------
+    iso_cmd : `~numpy.ndarray`
+        Structured ``numpy`` array with isochrones and stellar magnitudes.
+    """
+
+    v = f'{v_over_vcrit:.1f}'
+    ver = f'v{version:.1f}'
+    p = phot_str_helper[phot_system.lower()]
+    path = os.path.join(mist_path, 'MIST_' + ver + f'_vvcrit{v}_' + p)
+    sign = 'm' if feh < 0 else 'p'
+    fn = f'MIST_{ver}_feh_{sign}{abs(feh):.2f}_afe_p0.0_vvcrit{v}_{p}.iso.cmd'
+    fn = os.path.join(path, fn)
+    iso_cmd = IsoCmdReader(fn, verbose=False)
+    iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
+    return iso_cmd
+
+
+class MISTIsochrone(Isochrone):
     """
     Class for fetching and storing MIST isochrones. It also has several methods
     for calculating IMF-weighted photometric properties of a stellar population
@@ -539,7 +539,7 @@ class MistIsochrone(Isochrone):
             mags = [_iso[f].data for f in filt]
             self._iso_full = append_fields(self._iso_full, filt, mags)
 
-        super(MistIsochrone, self).__init__(
+        super(MISTIsochrone, self).__init__(
             mini = self._iso_full['initial_mass'],
             mact = self._iso_full['star_mass'],
             mags = Table(self._iso_full[filters]),
