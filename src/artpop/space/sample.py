@@ -11,8 +11,15 @@ from ..log import logger
 __all__ = ['xy_from_grid', 'sersic_xy', 'plummer_xy', 'uniform_xy']
 
 
+def _check_offset(xy_dim, dx, dy):
+    """Check if center of source falls within image."""
+    center = np.array([xy_dim[0]//2 + dx, xy_dim[1]//2 + dy])
+    if np.any(center <= 0.) or np.any(center >= xy_dim):
+        raise Exception(f'Center = {center} falls outside of the image.')
+
+
 def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
-                 random_state=None):
+                 dx=0, dy=0, random_state=None):
     """
     Sample xy positions from a discrete grid weighted by an arbitrary model.
 
@@ -30,6 +37,10 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
         Square dimension to sample within. This is useful if the mock image
         size is small compared to the scale of the model. To be useful,
         `sample_dim` should be larger than `xy_dim`.
+    dx : float, optional
+        Shift from center of image in pixels in the x direction.
+    dy : float, optional
+        Shift from center of image in pixels in the y direction.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -43,6 +54,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
         mock image are masked.
     """
     xy_dim = check_xy_dim(xy_dim)
+    _check_offset(xy_dim, dx, dy)
 
     if sample_dim is None:
         sample_dim = max(xy_dim)
@@ -72,6 +84,8 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     x_0 -= shift[0]
     y_0 -= shift[1]
 
+    x += dx
+    y += dy
     xy = np.vstack([x, y]).T
     xy = np.ma.masked_array(xy, mask=np.zeros_like(xy, dtype=bool))
 
@@ -90,7 +104,7 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
 
 
 def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
-              pixel_scale=0.2, num_r_eff=10, random_state=None):
+              pixel_scale, num_r_eff=10, dx=0, dy=0, random_state=None):
     """
     Sample xy positions from a two-dimensional Sersic distribution.
 
@@ -113,20 +127,25 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         Rotation angle, counterclockwise from the positive x-axis. If a float
         is given, the units are assumed to be `degree`.
     ellip : float
-        Ellipticity.
+        Ellipticity defined as `1 - b/a`, where `b` is the semi-minor axis
+        and `a` is the semi-major axis.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`.
     xy_dim : list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
-    pixel_scale : float or `~astropy.units.Quantity`, optional
+    pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
     num_r_eff : float, optional
         Number of r_eff to sample positions within. This parameter is needed
         because the current Sersic sampling function samples from within a
         discrete grid. Default is 10.
+    dx : float, optional
+        Shift from center of image in pixels in the x direction.
+    dy : float, optional
+        Shift from center of image in pixels in the y direction.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -143,6 +162,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         raise Exception('Sersic index n must be greater than zero.')
 
     xy_dim = check_xy_dim(xy_dim)
+    _check_offset(xy_dim, dx, dy)
 
     r_eff = check_units(r_eff, 'kpc').to('Mpc').value
     theta = check_units(theta, 'deg').to('radian').value
@@ -160,14 +180,14 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     model = Sersic2D(x_0=x_0, y_0=y_0, amplitude=1, r_eff=r_pix,
                      n=n, ellip=ellip, theta=theta)
 
-    xy = xy_from_grid(num_stars, model, xy_dim, sample_dim,
+    xy = xy_from_grid(num_stars, model, xy_dim, sample_dim, dx, dy,
                       random_state=random_state)
 
     return xy
 
 
-def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
-               random_state=None):
+def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
+               dx=0, dy=0, random_state=None):
     """
     Sample xy positions from a two-dimensional Plummer distributions using
     inverse transform sampling.
@@ -185,9 +205,13 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
     xy_dim : int or list-like
         Dimensions of the mock image in xy coordinates. If int is given,
         will make the x and y dimensions the same.
-    pixel_scale : float or `~astropy.units.Quantity`, optional
+    pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
+    dx : float, optional
+        Shift from center of image in pixels in the x direction.
+    dy : float, optional
+        Shift from center of image in pixels in the y direction.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -201,13 +225,14 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
         mock image are masked.
     """
     xy_dim = check_xy_dim(xy_dim)
-    rng = check_random_state(random_state)
+    _check_offset(xy_dim, dx, dy)
 
     scale_radius = check_units(scale_radius, 'kpc').to('Mpc').value
     distance = check_units(distance, 'Mpc').to('Mpc').value
     r_sky = np.arctan2(scale_radius, distance) * u.radian.to('arcsec')
     pixel_scale = check_units(pixel_scale, u.arcsec / u.pixel)
 
+    rng = check_random_state(random_state)
     s = rng.random(size=int(num_stars))
     r = u.arcsec * r_sky / np.sqrt(s**(-2 / 3) - 1)
     r = r.to('pixel', u.pixel_scale(pixel_scale)).value
@@ -217,8 +242,9 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale=0.2,
     xy = np.zeros((len(r), 2))
 
     shift = xy_dim // 2
-    xy[:, 0] = r * np.cos(phi) * np.sin(theta) + shift[0]
-    xy[:, 1] = r * np.sin(phi) * np.sin(theta) + shift[1]
+    xy[:, 0] = r * np.cos(phi) * np.sin(theta) + shift[0] + dx
+    xy[:, 1] = r * np.sin(phi) * np.sin(theta) + shift[1] + dy
+    xy = np.round(xy).astype(int)
 
     x_outside = (xy[:, 0] < 0) | (xy[:, 0] >= xy_dim[0])
     y_outside = (xy[:, 1] < 0) | (xy[:, 1] >= xy_dim[1])
@@ -255,9 +281,9 @@ def uniform_xy(num_stars, xy_dim, random_state=None):
     xy : `~numpy.array`
         xy pixel positions.
     """
+    num_stars = int(num_stars)
     xy_dim = check_xy_dim(xy_dim)
     rng = check_random_state(random_state)
-    num_stars = int(num_stars)
     xy = np.vstack([rng.uniform(0, xy_dim[0], num_stars),
                     rng.uniform(0, xy_dim[1], num_stars)]).T
     return xy

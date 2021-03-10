@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='artpop',
-    version='0.0.2',
+    version='0.1',
     description='Building artificial galaxies one star at a time',
     long_description=readme(),
     author='Johnny Greco & Shany Danieli',
@@ -16,8 +16,8 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
-    url='https://github.com/ArtificialStellarPopulations/ArtPop', 
-    install_requires=[    
+    url='https://github.com/ArtificialStellarPopulations/ArtPop',
+    install_requires=[
         'numpy>=1.17',
         'scipy>=1',
         'astropy>=4',

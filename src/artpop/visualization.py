@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 __all__ = ['mpl_style', 'show_image']
 
+
 mpl_style = {
     'axes.spines.left': True,
     'axes.spines.bottom': True,
@@ -41,7 +42,7 @@ mpl_style = {
 }
 
 
-def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r', 
+def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
                rasterized=False, **kwargs):
     """
     Display image using matplotlib.
@@ -51,11 +52,11 @@ def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
     image : `~numpy.ndarray`
         The image pixels.
     percentile : list-like or None, optional
-        Set the min and max pixel values to the given low and high percentile 
-        values: [low, high]. If None, use all pixel values. 
+        Set the min and max pixel values to the given low and high percentile
+        values: [low, high]. If None, use all pixel values.
     subplots : tuple or None, optional
         The ``matplotlib`` figure and axis objects (`fig`, `ax`). If None, a
-        new figure will be created. 
+        new figure will be created.
     cmap : str, optional
         ``matplotlib`` color map.
     rasterized : bool, optional
@@ -68,7 +69,7 @@ def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
     fig : `~matplotlib.figure.Figure`
         The Figure object.
     ax : `~matplotlib.axes._subplots.AxesSubplot`
-        The axis. 
+        The axis.
     """
     if subplots is None:
         figsize = kwargs.pop('figsize', (10, 10))

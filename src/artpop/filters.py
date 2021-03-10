@@ -13,75 +13,17 @@ from .util import data_dir
 
 
 __all__ = ['phot_system_list',
+           'FilterSystem',
            'get_filter_names',
            'phot_system_lookup',
-           'FilterSystem',
-           'get_zero_point_converter']
+           'load_zero_point_converter']
 
 
-# default filter curve directory
-filter_dir = os.path.join(data_dir, 'filters')
-
-# list of implemented MIST photometric systems
+# list of photometric systems with pre-calculated filter properties
 phot_system_list = [
     'HST_WFC3', 'HST_ACSWF', 'SDSSugriz', 'CFHTugriz', 'DECam', 'HSC',
     'HST_ACSWF', 'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST'
 ]
-
-
-def get_filter_names(phot_system=None):
-    """
-    Get MIST photometric systems and filter names.
-
-    Parameters
-    ----------
-    phot_system : str or None
-        The desired photometric system.
-
-    Returns
-    -------
-    mist_filter_names : list or dict
-        If ``phot_system`` given, then a list of filter names is returned. If
-        ``phot_system`` is ``None``, then a dict of all photometric systems
-        and filters is returned.
-    """
-    fn = os.path.join(data_dir, 'filters/mist_filter_names.pkl')
-    pickle_in = open(fn, 'rb')
-    mist_filter_names = pickle.load(pickle_in)
-    pickle_in.close()
-    if phot_system is not None:
-        if type(phot_system) == str:
-            phot_system = [phot_system]
-        names = []
-        for p in phot_system:
-            names.extend(mist_filter_names[p])
-        mist_filter_names = names
-    return mist_filter_names
-
-
-def phot_system_lookup(filter_name=None):
-    """
-    Lookup the photometric system name associated with a given filter name.
-
-    Parameters
-    ----------
-    filter_name : str, optional
-        Filter name to lookup.
-
-    Returns
-    -------
-    lookup : dict or str
-        If ``filter_name`` is ``None``, a dictionary with the filter names as
-        keywords and the photometric systems as values. If ``filter_name`` is
-        not ``None``, its photometric system is returned.
-    """
-    fn = os.path.join(data_dir, 'filters/phot_system_lookup.pkl')
-    pickle_in = open(fn, 'rb')
-    lookup = pickle.load(pickle_in)
-    pickle_in.close()
-    if filter_name is not None:
-        lookup = lookup[filter_name]
-    return lookup
 
 
 class FilterSystem(object):
@@ -93,23 +35,23 @@ class FilterSystem(object):
 
     Parameters
     ----------
-    phot_system : str
-        Name of the filter photometric system.
-    filter_dir : str, optional
-        Path to directory containing the filter throughput curves.
+    filter_curve_files : list
+        List of the file names of the filter curves.
+    filter_names : str
+        Names of filters. Must be the same length as ``filter_curve_files``.
+    **kwargs
+        Optional argumnets for `~numpy.loadtxt`, which is used to load the
+        filter curve files.
     """
 
-    def __init__(self, phot_system, filter_dir=filter_dir, **kwargs):
-        if type(phot_system) == str:
-            phot_system = [phot_system]
-        self.phot_system = phot_system
-        self.filter_dir = filter_dir
-        for p in phot_system:
-            phot_system_path = os.path.join(filter_dir, p)
-            files = glob(os.path.join(phot_system_path, '*.csv'))
-            for fn in files:
-                name = os.path.basename(fn)[:-4]
-                setattr(self, name, Table.read(fn))
+    def __init__(self, filter_curve_files, filter_names, **kwargs):
+
+        self.filter_names = filter_names
+        for fn, name in zip(filter_curve_files, filter_names):
+            data = np.loadtxt(fn, **kwargs)
+            table = Table(data=data, names=['wave', 'trans'])
+            setattr(self, name, table)
+            self.filter_names.append(name)
 
     def _get_trans(self, bandpass):
         """
@@ -337,12 +279,67 @@ class ZeroPointConverter(object):
         return blue_convert - red_convert
 
 
-def get_zero_point_converter():
+def get_filter_names(phot_system=None):
+    """
+    Get MIST photometric systems and filter names.
+
+    Parameters
+    ----------
+    phot_system : str or None
+        The desired photometric system.
+
+    Returns
+    -------
+    mist_filter_names : list or dict
+        If ``phot_system`` given, then a list of filter names is returned. If
+        ``phot_system`` is ``None``, then a dict of all photometric systems
+        and filters is returned.
+    """
+    fn = os.path.join(data_dir, 'mist_filter_names.pkl')
+    pickle_in = open(fn, 'rb')
+    mist_filter_names = pickle.load(pickle_in)
+    pickle_in.close()
+    if phot_system is not None:
+        if type(phot_system) == str:
+            phot_system = [phot_system]
+        names = []
+        for p in phot_system:
+            names.extend(mist_filter_names[p])
+        mist_filter_names = names
+    return mist_filter_names
+
+
+def phot_system_lookup(filter_name=None):
+    """
+    Lookup the photometric system name associated with a given filter name.
+
+    Parameters
+    ----------
+    filter_name : str, optional
+        Filter name to lookup.
+
+    Returns
+    -------
+    lookup : dict or str
+        If ``filter_name`` is ``None``, a dictionary with the filter names as
+        keywords and the photometric systems as values. If ``filter_name`` is
+        not ``None``, its photometric system is returned.
+    """
+    fn = os.path.join(data_dir, 'phot_system_lookup.pkl')
+    pickle_in = open(fn, 'rb')
+    lookup = pickle.load(pickle_in)
+    pickle_in.close()
+    if filter_name is not None:
+        lookup = lookup[filter_name]
+    return lookup
+
+
+def load_zero_point_converter():
     """
     Create and return a `~artpop.filters.ZeroPointConverter` object.
     """
     from astropy.io import ascii
     from .util import data_dir
-    fn = os.path.join(data_dir, 'filters', 'zeropoints.txt')
+    fn = os.path.join(data_dir, 'zeropoints.txt')
     table= ascii.read(fn)
     return ZeroPointConverter(table)

@@ -7,16 +7,17 @@ from astropy import units as u
 from astropy.utils.misc import isiterable
 
 
-__all__ = ['check_random_state', 
-           'check_units', 
-           'check_odd', 
-           'check_xy_dim', 
+__all__ = ['check_random_state',
+           'check_units',
+           'check_odd',
+           'check_xy_dim',
            'embed_slices']
 
 
 project_dir = os.path.dirname(os.path.dirname(__file__))
 package_dir = os.path.join(project_dir, 'artpop')
 data_dir = os.path.join(package_dir, 'data')
+
 
 MIST_PATH = os.getenv('MIST_PATH')
 if MIST_PATH is None:
@@ -66,15 +67,15 @@ def check_random_state(seed):
 
 def check_units(value, default_unit):
     """
-    Check if an object has units. If not, apply the default unit. 
+    Check if an object has units. If not, apply the default unit.
 
     Parameters
     ----------
     value : float, list-like, or `~astropy.units.Quantity`
         Parameter that has units.
     default_unit : str or `astropy` unit
-        The default unit to apply to `value` if it does not have units. 
-        
+        The default unit to apply to `value` if it does not have units.
+
     Returns
     -------
     quantity : `~astropy.units.Quantity`
@@ -94,7 +95,7 @@ def check_units(value, default_unit):
 
 def check_odd(val, name='value'):
     """
-    Raise Exception if  `val` is not odd. 
+    Raise Exception if  `val` is not odd.
     """
     if isiterable(val):
         if np.any(np.asarray(val) % 2 == 0):
@@ -106,14 +107,14 @@ def check_odd(val, name='value'):
 
 def check_xy_dim(xy_dim, force_odd=True):
     """
-    Check the format of `xy_dim`. 
+    Check the format of `xy_dim`.
 
     Parameters
     ----------
     xy_dim : int or list-like
-        The dimensions of mock image in xy units. If `int` is given, it is 
+        The dimensions of mock image in xy units. If `int` is given, it is
         assumed to be both the x and y dimensions and (xy_dim, xy_dim) will be
-        returned. Otherwise xy_dim will be returned. 
+        returned. Otherwise xy_dim will be returned.
     force_odd : bool, optional
         If True (default), force both the x and y dimensions to be odd.
 
@@ -130,42 +131,42 @@ def check_xy_dim(xy_dim, force_odd=True):
     return xy_dim
 
 
-def embed_slices(center, arr_shape, img_shape):
+def embed_slices(center, model_shape, image_shape):
     """
-    Get slices to embed smaller array into larger image.
+    Get slices to embed smaller model array into larger image array.
 
     Parameters
     ----------
     center : `~numpy.ndarray`
         Center of array in the image coordinates.
-    arr_shape : tuple
+    model_shape : tuple
         Shape of the array to embed (dimensions must be odd).
-    img_shape : tuple
+    image_shape : tuple
         Shape of the main image array.
 
     Returns
     -------
-    img_slice, arr_slice : tuples of slices
+    img_slice, mod_slice : tuples of slices
         Slicing indices. To embed array in image,
-        use the following: img[img_slice] = arr[arr_slice]
+        use the following: image[img_slice] = model[mod_slice]
     """
-    arr_shape = np.asarray(arr_shape)
-    img_shape = np.asarray(img_shape)
+    model_shape = np.asarray(model_shape)
+    image_shape = np.asarray(image_shape)
 
-    check_odd(arr_shape, 'embed_slices array shape')
+    check_odd(model_shape, 'embed_slices array shape')
 
-    imin = center - arr_shape//2
-    imax = center + arr_shape//2
+    imin = center - model_shape//2
+    imax = center + model_shape//2
 
-    amin = (imin < np.array([0,0]))*(-imin)
-    amax = arr_shape*(imax<=img_shape-1) +\
-           (arr_shape-(imax-(img_shape-1)))*(imax>img_shape-1)
+    amin = (imin < np.array([0,0])) * (-imin)
+    amax = model_shape * (imax <= image_shape - 1) +\
+           (model_shape - (imax - image_shape + 1)) * (imax > image_shape - 1)
 
     imin = np.maximum(imin, np.array([0, 0]))
-    imax = np.minimum(imax, np.array(img_shape)-1)
+    imax = np.minimum(imax, np.array(image_shape)-1)
     imax += 1
 
     img_slice = np.s_[imin[0]:imax[0], imin[1]:imax[1]]
-    arr_slice = np.s_[amin[0]:amax[0], amin[1]:amax[1]]
+    mod_slice = np.s_[amin[0]:amax[0], amin[1]:amax[1]]
 
-    return img_slice, arr_slice
+    return img_slice, mod_slice
