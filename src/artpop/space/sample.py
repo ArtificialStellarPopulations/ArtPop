@@ -19,7 +19,7 @@ def _check_offset(xy_dim, dx, dy):
 
 
 def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
-                 dx=0, dy=0, random_state=None):
+                 dx=0, dy=0, drop_outside=False, random_state=None):
     """
     Sample xy positions from a discrete grid weighted by an arbitrary model.
 
@@ -41,6 +41,9 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
         Shift from center of image in pixels in the x direction.
     dy : float, optional
         Shift from center of image in pixels in the y direction.
+    drop_outside : bool, optional
+        If True, drop all stars that fall outside of the image. In this case,
+        the returned `~numpy.ndarray` will not be masked.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -49,9 +52,11 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
 
     Returns
     -------
-    xy : `~numpy.ma.MaskedArray`
+    xy : `~numpy.ma.MaskedArray` or `~numpy.ndarray`
         Masked numpy array of xy positions. Positions that fall outside the
-        mock image are masked.
+        mock image are masked. If ``drop_outside == True``, then the stars
+        that fall outside of the image will be dropped and the returned array
+        will not be masked.
     """
     xy_dim = check_xy_dim(xy_dim)
     _check_offset(xy_dim, dx, dy)
@@ -100,11 +105,15 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
             logger.warning(msg)
             xy.mask = np.column_stack((outside_image, outside_image))
 
+            if drop_outside:
+                xy = xy[~outside_image].data
+
     return xy
 
 
 def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
-              pixel_scale, num_r_eff=10, dx=0, dy=0, random_state=None):
+              pixel_scale, num_r_eff=10, dx=0, dy=0, drop_outside=False,
+              random_state=None):
     """
     Sample xy positions from a two-dimensional Sersic distribution.
 
@@ -146,6 +155,9 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
         Shift from center of image in pixels in the x direction.
     dy : float, optional
         Shift from center of image in pixels in the y direction.
+    drop_outside : bool, optional
+        If True, drop all stars that fall outside of the image. In this case,
+        the returned `~numpy.ndarray` will not be masked.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -181,13 +193,13 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
                      n=n, ellip=ellip, theta=theta)
 
     xy = xy_from_grid(num_stars, model, xy_dim, sample_dim, dx, dy,
-                      random_state=random_state)
+                      drop_outside=drop_outside, random_state=random_state)
 
     return xy
 
 
 def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
-               dx=0, dy=0, random_state=None):
+               dx=0, dy=0, drop_outside=False, random_state=None):
     """
     Sample xy positions from a two-dimensional Plummer distributions using
     inverse transform sampling.
@@ -212,6 +224,9 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
         Shift from center of image in pixels in the x direction.
     dy : float, optional
         Shift from center of image in pixels in the y direction.
+    drop_outside : bool, optional
+        If True, drop all stars that fall outside of the image. In this case,
+        the returned `~numpy.ndarray` will not be masked.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -220,9 +235,11 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
 
     Returns
     -------
-    xy : `~numpy.ma.MaskedArray`
+    xy : `~numpy.ma.MaskedArray` or `~numpy.ndarray`
         Masked numpy array of xy positions. Positions that fall outside the
-        mock image are masked.
+        mock image are masked. If ``drop_outside == True``, then the stars
+        that fall outside of the image will be dropped and the returned array
+        will not be masked.
     """
     xy_dim = check_xy_dim(xy_dim)
     _check_offset(xy_dim, dx, dy)
@@ -241,10 +258,9 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
     theta = np.arccos(2 * rng.random(size=len(r)) - 1)
     xy = np.zeros((len(r), 2))
 
-    shift = xy_dim // 2
+    shift = xy_dim /  2
     xy[:, 0] = r * np.cos(phi) * np.sin(theta) + shift[0] + dx
     xy[:, 1] = r * np.sin(phi) * np.sin(theta) + shift[1] + dy
-    xy = np.round(xy).astype(int)
 
     x_outside = (xy[:, 0] < 0) | (xy[:, 0] >= xy_dim[0])
     y_outside = (xy[:, 1] < 0) | (xy[:, 1] >= xy_dim[1])
@@ -255,6 +271,9 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
         msg = '{} stars outside the image'.format(outside_image.sum())
         logger.warning(msg)
         xy.mask = np.column_stack((outside_image, outside_image))
+
+        if drop_outside:
+            xy = xy[~outside_image].data
 
     return xy
 
