@@ -22,7 +22,7 @@ setup(
         'scipy>=1',
         'astropy>=4',
         'matplotlib>=3',
-        'fast-histogram'
+        'fast-histogram>=0.9'
      ],
      classifiers=[
         "Programming Language :: Python :: 3",
