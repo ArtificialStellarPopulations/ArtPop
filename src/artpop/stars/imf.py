@@ -12,52 +12,6 @@ __all__ = ['IMFIntegrator', 'broken_power_law', 'broken_power_law_normed',
            'build_galaxy']
 
 
-class IMFIntegrator(object):
-    """
-    A helper class for numerically integrating the IMF.
-    """
-
-    def __init__(self, name, m_min=0.1, m_max=120.0):
-        self.name = name
-        self._func = imf_dict[name]
-        self.m_min = m_min
-        self.m_max = m_max
-        self.num_norm = self.integrate(m_min, m_max, None)
-        self.mass_norm = self.m_integrate(m_min, m_max, None)
-
-    def func(self, m):
-        return self._func(m, norm_type=None)
-
-    def m_func(self, m):
-        return m * self._func(m, norm_type=None)
-
-    def integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
-        m_min = m_min if m_min else self.m_min
-        m_max = m_max if m_max else self.m_max
-        if norm == True:
-            n = self.num_norm
-        elif norm is None or norm == False:
-            n = 1.0
-        elif type(norm) == int or type(norm) == float:
-            n = norm
-        else:
-            raise Exception(f'{norm} is not a valid normalization.')
-        return quad(self.func, m_min, m_max, **kwargs)[0] / n
-
-    def m_integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
-        m_min = m_min if m_min else self.m_min
-        m_max = m_max if m_max else self.m_max
-        if norm == True:
-            n = self.mass_norm
-        elif norm is None or norm == False:
-            n = 1.0
-        elif type(norm) == int or type(norm) == float:
-            n = norm
-        else:
-            raise Exception(f'{norm} is not a valid normalization.')
-        return quad(self.m_func, m_min, m_max, **kwargs)[0] / n
-
-
 def salpeter(mass_grid, norm_type=None,
              norm_mass_min=None, norm_mass_max=None):
     """
@@ -330,3 +284,49 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
         stars = np.concatenate([stars, new_stars])
 
     return stars
+
+
+class IMFIntegrator(object):
+    """
+    A helper class for numerically integrating the IMF.
+    """
+
+    def __init__(self, name, m_min=0.1, m_max=120.0):
+        self.name = name
+        self._func = imf_dict[name]
+        self.m_min = m_min
+        self.m_max = m_max
+        self.num_norm = self.integrate(m_min, m_max, None)
+        self.mass_norm = self.m_integrate(m_min, m_max, None)
+
+    def func(self, m):
+        return self._func(m, norm_type=None)
+
+    def m_func(self, m):
+        return m * self._func(m, norm_type=None)
+
+    def integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
+        m_min = m_min if m_min else self.m_min
+        m_max = m_max if m_max else self.m_max
+        if norm == True:
+            n = self.num_norm
+        elif norm is None or norm == False:
+            n = 1.0
+        elif type(norm) == int or type(norm) == float:
+            n = norm
+        else:
+            raise Exception(f'{norm} is not a valid normalization.')
+        return quad(self.func, m_min, m_max, **kwargs)[0] / n
+
+    def m_integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
+        m_min = m_min if m_min else self.m_min
+        m_max = m_max if m_max else self.m_max
+        if norm == True:
+            n = self.mass_norm
+        elif norm is None or norm == False:
+            n = 1.0
+        elif type(norm) == int or type(norm) == float:
+            n = norm
+        else:
+            raise Exception(f'{norm} is not a valid normalization.')
+        return quad(self.m_func, m_min, m_max, **kwargs)[0] / n
