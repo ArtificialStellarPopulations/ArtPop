@@ -58,4 +58,4 @@ Modules
    modules/source
    modules/filters
    modules/util
-   modules/viz
+   modules/visualization
