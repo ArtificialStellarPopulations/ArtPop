@@ -326,8 +326,7 @@ class Isochrone(object):
         sbf = -2.5 * np.log10(lumlum / lum)
         return sbf
 
-    def ssp_mag(self, bandpass, imf='kroupa', norm_type='mass',
-                       **kwargs):
+    def ssp_mag(self, bandpass, imf='kroupa', norm_type='mass', **kwargs):
         """
         Calculate IMF-weighted magnitude.
 
@@ -417,7 +416,7 @@ class Isochrone(object):
             if self.m_max < mlim_ns:
                 mmax = self.m_max
                 mass = mass + 0.48 * quad(imf_func, mmax, mlim_ns)[0] / norm
-                mass = mass + 0.077 * quad(m_imf_func, mmax,mlim_ns)[0] / norm
+                mass = mass + 0.077 * quad(m_imf_func, mmax, mlim_ns)[0] / norm
 
         return mass
 
