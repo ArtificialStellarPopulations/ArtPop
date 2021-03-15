@@ -137,10 +137,13 @@ class SersicSP(Source):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name
+        of evolutionary phase (str).
     """
 
     def __init__(self, sp, r_eff, n, theta, ellip, xy_dim, pixel_scale,
-                 num_r_eff=10, dx=0, dy=0):
+                 num_r_eff=10, dx=0, dy=0, labels=None):
 
         self.sp = sp
         self.mag_limit = sp.mag_limit
@@ -177,7 +180,7 @@ class SersicSP(Source):
         _xy = sersic_xy(**self.xy_kw)
 
         super(SersicSP, self).__init__(
-            _xy, sp.mag_table, xy_dim, pixel_scale)
+            _xy, sp.mag_table, xy_dim, pixel_scale, labels)
 
     def mag_to_image_amplitude(self, m_tot, zpt):
         """
@@ -281,6 +284,9 @@ class MISTSersicSSP(SersicSP):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name
+        of evolutionary phase (str).
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -292,7 +298,8 @@ class MISTSersicSSP(SersicSP):
                  distance, xy_dim, pixel_scale, num_stars=None,
                  total_mass=None, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, mist_path=MIST_PATH, num_r_eff=10,
-                 mass_tolerance=0.01, dx=0, dy=0, random_state=None):
+                 mass_tolerance=0.01, dx=0, dy=0, labels=None,
+                 random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            distance=distance, total_mass=total_mass,
@@ -305,7 +312,8 @@ class MISTSersicSSP(SersicSP):
 
         super(MISTSersicSSP, self).__init__(
             sp=ssp, r_eff=r_eff, n=n, theta=theta, ellip=ellip, xy_dim=xy_dim,
-            pixel_scale=pixel_scale, num_r_eff=num_r_eff, dx=dx, dy=dy)
+            pixel_scale=pixel_scale, num_r_eff=num_r_eff, dx=dx, dy=dy,
+            labels=labels)
 
 
 class PlummerSP(Source):
@@ -329,9 +337,13 @@ class PlummerSP(Source):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name
+        of evolutionary phase (str).
     """
 
-    def __init__(self, sp, scale_radius, xy_dim, pixel_scale, dx=0, dy=0):
+    def __init__(self, sp, scale_radius, xy_dim, pixel_scale, dx=0, dy=0,
+                 labels=None):
 
         self.sp = sp
         self.mag_limit = sp.mag_limit
@@ -361,7 +373,7 @@ class PlummerSP(Source):
 
         _xy = plummer_xy(**self.xy_kw)
         super(PlummerSP, self).__init__(
-            _xy, sp.mag_table, xy_dim, pixel_scale)
+            _xy, sp.mag_table, xy_dim, pixel_scale, labels)
 
     def mag_to_image_amplitude(self, m_tot, zpt):
         """
@@ -449,6 +461,9 @@ class MISTPlummerSSP(PlummerSP):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name
+        of evolutionary phase (str).
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -460,7 +475,8 @@ class MISTPlummerSSP(PlummerSP):
                  distance, xy_dim, pixel_scale, num_stars=None,
                  total_mass=None, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, mist_path=MIST_PATH,
-                 mass_tolerance=0.01, dx=0, dy=0, random_state=None):
+                 mass_tolerance=0.01, dx=0, dy=0, labels=None,
+                 random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            distance=distance, total_mass=total_mass,
@@ -473,7 +489,7 @@ class MISTPlummerSSP(PlummerSP):
 
         super(MISTPlummerSSP, self).__init__(
             sp=ssp, scale_radius=scale_radius, xy_dim=xy_dim,
-            pixel_scale=pixel_scale, dx=dx, dy=dy)
+            pixel_scale=pixel_scale, dx=dx, dy=dy, labels=labels)
 
 
 class UniformSSP(Source):
@@ -627,6 +643,9 @@ class MISTUniformSSP(UniformSSP):
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
+    labels : list-like, optional
+        Labels for the stars. For example, EEP values (int or float) or name
+        of evolutionary phase (str).
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -637,7 +656,7 @@ class MISTUniformSSP(UniformSSP):
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,
                  pixel_scale, sb, sb_band, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, ssp_kw={}, mist_path=MIST_PATH,
-                 random_state=None, **kwargs):
+                 labels=None, random_state=None, **kwargs):
 
         self.iso_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            mist_path=mist_path)
@@ -648,5 +667,6 @@ class MISTUniformSSP(UniformSSP):
         super(MISTUniformSSP, self).__init__(
             isochrone=iso, distance=distance, xy_dim=xy_dim, sb=sb,
             sb_band=sb_band, mag_limit=mag_limit,
-            mag_limit_band=mag_limit_band, pixel_scale=pixel_scale,
-            imf=imf, imf_kw=imf_kw, ssp_kw=ssp_kw, random_state=random_state)
+            mag_limit_band=mag_limit_band, pixel_scale=pixel_scale, imf=imf,
+            imf_kw=imf_kw, ssp_kw=ssp_kw, labels=labels,
+            random_state=random_state)
