@@ -671,7 +671,7 @@ class MISTSSP(SSP):
         return it. Otherwise raise ``ValueError``.
     """
 
-    phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
+    phases = ['PMS', 'MS', 'giants', 'RGB', 'CHeB', 'AGB',
               'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
     def __init__(self, log_age, feh, phot_system, num_stars=None,
@@ -728,6 +728,8 @@ class MISTSSP(SSP):
         """
         if phase == 'all':
             mask = np.ones_like(self.eep, dtype=bool)
+        elif phase == 'PMS':
+            mask = self.eep < 202
         elif phase == 'MS':
             mask = (self.eep >= 202) & (self.eep < 454)
         elif phase == 'giants':
@@ -750,6 +752,15 @@ class MISTSSP(SSP):
             raise Exception('Uh, what phase u want?')
 
         return mask
+
+    def get_star_phases(self):
+        """Returns the stellar phases (as defined by the MIST EEPs)."""
+        phase_list = ['PMS', 'MS', 'RGB', 'CHeB', 'EAGB',
+                      'TPAGB', 'postAGB', 'WDCS']
+        star_phases = np.array([''] * self.num_stars, dtype='<U8')
+        for phase in phase_list:
+            star_phases[self.select_phase(phase)] = phase
+        return star_phases
 
 
 class CompositePopulation(SSP):
