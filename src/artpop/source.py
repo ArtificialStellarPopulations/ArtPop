@@ -83,6 +83,12 @@ class Source(object):
         """Create deep copy of source object."""
         return deepcopy(self)
 
+    def select_stars(self, label):
+        """Return boolean mask that is set to True for stars of given label."""
+        if self.labels is None:
+            raise Exception('The stars of this source do not have labels.')
+        return self.labels == label
+
     def __add__(self, src):
         if Source not in src.__class__.__mro__:
             raise Exception(f'{type(src)} is not a valid Source object')
@@ -214,6 +220,19 @@ class SersicSP(Source):
         return mu_e, amplitude, param_name
 
 
+def _check_label_type(ssp, label_type, has_phases=True):
+    if label_type is not None:
+        if label_type == 'phases' and has_phases:
+            labels = ssp.get_star_phases()
+        elif hasattr(ssp, label_type):
+            labels = getattr(ssp, label_type)
+        else:
+            raise Exception(f'{label_type} is not a valid label type.')
+    else:
+        labels = None
+    return labels
+
+
 class MISTSersicSSP(SersicSP):
     """
     MIST simple stellar population with a Sersic spatial distribution. This
@@ -284,9 +303,9 @@ class MISTSersicSSP(SersicSP):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
-    labels : list-like, optional
-        Labels for the stars. For example, EEP values (int or float) or name
-        of evolutionary phase (str).
+    label_type : str, optional
+        If not None, the type of labels to pass to the `~artpop.source.Source`
+        object. Can be `phases` or an attribute of `~artpop.stars.MISTSSP`.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -298,7 +317,7 @@ class MISTSersicSSP(SersicSP):
                  distance, xy_dim, pixel_scale, num_stars=None,
                  total_mass=None, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, mist_path=MIST_PATH, num_r_eff=10,
-                 mass_tolerance=0.01, dx=0, dy=0, labels=None,
+                 mass_tolerance=0.01, dx=0, dy=0, label_type=None,
                  random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
@@ -309,6 +328,7 @@ class MISTSersicSSP(SersicSP):
                            mass_tolerance=mass_tolerance)
 
         ssp = MISTSSP(**self.ssp_kw)
+        labels = _check_label_type(ssp, label_type)
 
         super(MISTSersicSSP, self).__init__(
             sp=ssp, r_eff=r_eff, n=n, theta=theta, ellip=ellip, xy_dim=xy_dim,
@@ -461,9 +481,9 @@ class MISTPlummerSSP(PlummerSP):
         Shift from center of image in the x direction.
     dy : float, optional
         Shift from center of image in the y direction.
-    labels : list-like, optional
-        Labels for the stars. For example, EEP values (int or float) or name
-        of evolutionary phase (str).
+    label_type : str, optional
+        If not None, the type of labels to pass to the `~artpop.source.Source`
+        object. Can be `phases` or an attribute of `~artpop.stars.MISTSSP`.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -475,7 +495,7 @@ class MISTPlummerSSP(PlummerSP):
                  distance, xy_dim, pixel_scale, num_stars=None,
                  total_mass=None, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, mist_path=MIST_PATH,
-                 mass_tolerance=0.01, dx=0, dy=0, labels=None,
+                 mass_tolerance=0.01, dx=0, dy=0, label_type=None,
                  random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
@@ -486,6 +506,7 @@ class MISTPlummerSSP(PlummerSP):
                            mass_tolerance=mass_tolerance)
 
         ssp = MISTSSP(**self.ssp_kw)
+        labels = _check_label_type(ssp, label_type)
 
         super(MISTPlummerSSP, self).__init__(
             sp=ssp, scale_radius=scale_radius, xy_dim=xy_dim,
@@ -527,6 +548,9 @@ class UniformSSP(Source):
         Optional keyword arguments for sampling the stellar mass function.
     ssp_kw : dict, optional
         Additional keyword arguments for `~artpop.stars.SSP`.
+    label_type : str, optional
+        If not None, the type of labels to pass to the `~artpop.source.Source`
+        object. Must be an attribute of `~artpop.stars.SSP`.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -536,7 +560,7 @@ class UniformSSP(Source):
 
     def __init__(self, isochrone, distance, xy_dim, pixel_scale, sb, sb_band,
                  mag_limit=None, mag_limit_band=None, imf='kroupa', imf_kw={},
-                 ssp_kw={}, random_state=None):
+                 ssp_kw={}, label_type=None, random_state=None):
 
         self.isochrone = isochrone
         self.mag_limit = mag_limit
@@ -557,7 +581,19 @@ class UniformSSP(Source):
         self.ssp_kw['distance'] = distance
         self.ssp_kw['total_mass'] = None
         self.ssp_kw['num_stars'] = int(stars_per_pix * np.multiply(*xy_dim))
-        self.sp = SSP(isochrone, **self.ssp_kw)
+
+        if type(isochrone) == MISTIsochrone:
+            self.ssp_kw['log_age'] = isochrone.log_age
+            self.ssp_kw['feh'] = isochrone.feh
+            self.ssp_kw['phot_system'] = isochrone.phot_system
+            self.ssp_kw['version'] = isochrone.version
+            self.ssp_kw['v_over_vcrit'] = isochrone.v_over_vcrit
+            self.ssp_kw['mist_path'] = isochrone.mist_path
+            self.sp = MISTSSP(**self.ssp_kw)
+            labels = _check_label_type(self.sp, label_type)
+        else:
+            self.sp = SSP(isochrone, **self.ssp_kw)
+            labels = _check_label_type(self.sp, label_type, False)
 
         if mag_limit is not None and self.sp.frac_num_sampled < 1.0:
             self.smooth_model = Constant2D()
@@ -567,7 +603,7 @@ class UniformSSP(Source):
 
         _xy = uniform_xy(**self.xy_kw)
         super(UniformSSP, self).__init__(
-            _xy, self.sp.mag_table, xy_dim, pixel_scale)
+            _xy, self.sp.mag_table, xy_dim, pixel_scale, labels)
 
     def mag_to_image_amplitude(self, m_tot, zpt):
         """
@@ -643,9 +679,9 @@ class MISTUniformSSP(UniformSSP):
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
-    labels : list-like, optional
-        Labels for the stars. For example, EEP values (int or float) or name
-        of evolutionary phase (str).
+    label_type : str, optional
+        If not None, the type of labels to pass to the `~artpop.source.Source`
+        object. Can be `phases` or an attribute of `~artpop.stars.MISTSSP`.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -656,7 +692,7 @@ class MISTUniformSSP(UniformSSP):
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,
                  pixel_scale, sb, sb_band, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, ssp_kw={}, mist_path=MIST_PATH,
-                 labels=None, random_state=None, **kwargs):
+                 label_type=None, random_state=None, **kwargs):
 
         self.iso_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            mist_path=mist_path)
@@ -668,5 +704,5 @@ class MISTUniformSSP(UniformSSP):
             isochrone=iso, distance=distance, xy_dim=xy_dim, sb=sb,
             sb_band=sb_band, mag_limit=mag_limit,
             mag_limit_band=mag_limit_band, pixel_scale=pixel_scale, imf=imf,
-            imf_kw=imf_kw, ssp_kw=ssp_kw, labels=labels,
+            imf_kw=imf_kw, ssp_kw=ssp_kw, label_type=label_type,
             random_state=random_state)
