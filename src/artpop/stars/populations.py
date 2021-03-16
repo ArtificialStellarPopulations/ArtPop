@@ -280,10 +280,11 @@ class SSP(StellarPopulation):
         Isochrone object.
     num_stars : int or `None`
         Number of stars in source. If `None`, then must give `total_mass`.
-    total_mass : float or `None`
+    total_mass : float or `~astropy.units.Quantity` or `None`
         Stellar mass of the source. If `None`, then must give `num_stars`. This
         mass accounts for stellar remnants when ``add_remnants = True``, which
-        means the actual sampled mass will be less than the given value.
+        means the actual sampled mass will be less than the given value. If
+        float is given, the units are assumed to be solar masses.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
@@ -325,7 +326,7 @@ class SSP(StellarPopulation):
         self.mag_limit_band = mag_limit_band
         self.rng = check_random_state(random_state)
         self.build_pop(num_stars, total_mass, mass_tolerance, add_remnants)
-        self._r = {'M_star': f'{self.total_mass:.2e} M_sun'}
+        self._r = {'M_star': f'{self.total_mass.value:.2e} M_sun'}
 
     def build_pop(self, num_stars=None, total_mass=None, mass_tolerance=0.01,
                   add_remnants=True):
@@ -337,11 +338,11 @@ class SSP(StellarPopulation):
         ----------
         num_stars : int or `None`
             Number of stars in source. If `None`, then must give `total_mass`.
-        total_mass : float or `None`
-            Stellar mass of the source in solar masses. If `None`, then must
-            give `num_stars`. This mass accounts for stellar remnants when u
-            ``add_remnants = True``, which means the actual sampled mass will
-            be less than the given value.
+        total_mass : float or `~astropy.units.Quantity` or `None`
+            Stellar mass of the source. If `None`, then must give `num_stars`.
+            This mass accounts for stellar remnants when ``add_remnants = True``
+            which means the actual sampled mass will be less than the given
+            value. If float is given, the units are assumed to be solar masses.
         mass_tolerance : float, optional
             Tolerance in the fractional difference between the input mass and
             the final mass of the population. The parameter is only used when
@@ -389,6 +390,8 @@ class SSP(StellarPopulation):
             self.sampled_mass = self.star_masses.sum()
 
         elif total_mass is not None:
+
+            total_mass = check_units(total_mass, 'Msun').to('Msun').value
 
             # calculate fraction of mass that remains after mass loss
             mass_loss = iso.ssp_surviving_mass(
@@ -469,14 +472,16 @@ class SSP(StellarPopulation):
                 ff += np.sum(10**(-0.8 * evolved_mags[filt]))
                 log_dddd = 4 * np.log10((10 * u.pc).to('cm').value)
                 self._integrated_log_lumlum[filt] = np.log10(ff) + log_dddd
-
         else:
-
             # calculate total_mass with stellar remnants
             self.total_mass = self.sampled_mass / remnants_factor
 
         self.live_star_mass = self.total_mass * remnants_factor
         self.ssp_labels = np.ones(len(self.star_masses), dtype=int)
+
+        self.total_mass *= u.Msun
+        self.sampled_mass *= u.Msun
+        self.live_star_mass *= u.Msun
 
         for attr in ['eep', 'log_L', 'log_Teff']:
             if hasattr(iso, attr):
@@ -633,11 +638,11 @@ class MISTSSP(SSP):
         Name of the photometric system(s).
     num_stars : int or `None`
         Number of stars in source. If `None`, then must give `total_mass`.
-    total_mass : float or `None`
-        Stellar mass of the source in solar masses. If `None`, then must give
-        `num_stars`. This mass accounts for stellar remnants when
-        ``add_remnants = True``, meaning the actual sampled mass will be less
-        than the given value.
+    total_mass : float or `~astropy.units.Quantity` or `None`
+        Stellar mass of the source. If `None`, then must give `num_stars`. This
+        mass accounts for stellar remnants when ``add_remnants = True``, which
+        means the actual sampled mass will be less than the given value. If
+        float is given, the units are assumed to be solar masses.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
@@ -777,7 +782,7 @@ class CompositePopulation(SSP):
         num_fracs = self.ssp_num_fracs
         mass_fracs = self.ssp_mass_fracs
         r = {'N_pops': self.num_pops,
-             'M_star': f'{self.total_mass:.2e} M_sun',
+             'M_star': f'{self.total_mass.value:.2e} M_sun',
              'number fractions': [f'{p * 100:.2f}%' for p in num_fracs],
              'mass fractions': [f'{p * 100:.2f}%' for p in mass_fracs]}
         if hasattr(self, 'log_age'):

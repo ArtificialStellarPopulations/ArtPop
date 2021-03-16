@@ -141,7 +141,7 @@ class Imager(metaclass=abc.ABCMeta):
         image = histogram2d(_x, _y, bins=bins, weights=_s, range=hist_range).T
         return image
 
-    def apply_seeing(self, image, psf=None, boundary='wrap', **kwargs):
+    def apply_seeing(self, image, psf=None, boundary='wrap'):
         """
         Convolve mock image with psf.
 

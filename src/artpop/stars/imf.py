@@ -2,9 +2,10 @@
 import numpy as np
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
+from astropy import units as u
 
 # Project
-from ..util import check_random_state
+from ..util import check_random_state, check_units
 
 
 __all__ = ['IMFIntegrator', 'broken_power_law', 'broken_power_law_normed',
@@ -263,8 +264,9 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
 
     Parameters
     ----------
-    stellar_mass : float
-        Stellar mass of galaxy.
+    stellar_mass : float or `~astropy.units.Quantity`
+        Stellar mass of galaxy. If float is given, the units are assumed to be
+        solar masses.
     num_stars_iter : int
         Number of stars to generate at each iteration. Lower this
         number (at the expense of speed) to get a more accurate total mass.
@@ -277,6 +279,7 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
 
     stars = []
     total_mass = 0.0
+    stellar_mass = check_units(stellar_mass, 'Msun').to('Msun').value
 
     while total_mass < stellar_mass:
         new_stars = sample_imf(int(num_stars_iter), **kwargs)
