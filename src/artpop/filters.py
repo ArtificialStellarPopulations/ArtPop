@@ -22,7 +22,7 @@ __all__ = ['phot_system_list',
 # list of photometric systems with pre-calculated filter properties
 phot_system_list = [
     'HST_WFC3', 'HST_ACSWF', 'SDSSugriz', 'CFHTugriz', 'DECam', 'HSC',
-    'HST_ACSWF', 'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST'
+    'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST'
 ]
 
 

@@ -106,7 +106,7 @@ class Imager(metaclass=abc.ABCMeta):
         if bandpass not in self.filters:
             raise Exception(f'{bandpass} filter properties were not provided.')
 
-    def inject_stars(self, x, y, signal, xy_dim):
+    def inject_stars(self, x, y, signal, xy_dim, mask=None):
         """
         Inject sources into image.
 
@@ -121,6 +121,9 @@ class Imager(metaclass=abc.ABCMeta):
         xy_dim : int or list-like
             The dimensions of mock image in xy units. If `int` is given, it is
             assumed to be both the x and y dimensions: (xy_dim, xy_dim).
+        mask : `~numpy.ndarray`, optional
+            Boolean mask that is set to True for stars you want to inject.
+            If None, all stars will be injected.
 
         Returns
         -------
@@ -129,11 +132,16 @@ class Imager(metaclass=abc.ABCMeta):
         """
         bins = tuple(np.asarray(xy_dim).astype(int))
         hist_range = [[0, bins[0] - 1], [0, bins[1]- 1]]
-        image = histogram2d(x, y, bins=bins,
-                            weights=signal, range=hist_range).T
+        if mask is not None:
+            _x = x[mask]
+            _y = y[mask]
+            _s = signal[mask]
+        else:
+            _x, _y, _s = x, y, signal
+        image = histogram2d(_x, _y, bins=bins, weights=_s, range=hist_range).T
         return image
 
-    def apply_seeing(self, image, psf=None, boundary='wrap', **kwargs):
+    def apply_seeing(self, image, psf=None, boundary='wrap'):
         """
         Convolve mock image with psf.
 
@@ -211,7 +219,7 @@ class IdealImager(Imager):
             image = image
         return image
 
-    def observe(self, source, bandpass, psf=None, zpt=27, **kwargs):
+    def observe(self, source, bandpass, psf=None, zpt=27, mask=None, **kwargs):
         """
         Make ideal observation.
 
@@ -226,6 +234,9 @@ class IdealImager(Imager):
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
             The magnitude zero point of the mock image.
+        mask : `~numpy.ndarray`, optional
+            Boolean mask that is set to True for stars you want to inject.
+            If None, all stars will be injected.
 
         Returns
         -------
@@ -238,7 +249,8 @@ class IdealImager(Imager):
         """
         self._check_source(source)
         flux = 10**(0.4 * (zpt - source.mags[bandpass]))
-        image = self.inject_stars(source.x, source.y, flux, source.xy_dim)
+        image = self.inject_stars(source.x, source.y, flux,
+                                  source.xy_dim, mask)
         image = self.inject_smooth_model(image, source, bandpass, zpt)
         image = self.apply_seeing(image, psf, **kwargs)
         observation = IdealObservation(image=image, bandpass=bandpass, zpt=zpt)
@@ -473,7 +485,7 @@ class ArtImager(Imager):
         return image
 
     def observe(self, source, bandpass, exptime, sky_sb=None, psf=None,
-                zpt=27.0, **kwargs):
+                zpt=27.0, mask=None, **kwargs):
         """
         Make artificial observation.
 
@@ -498,6 +510,9 @@ class ArtImager(Imager):
             The point-spread function. If None, will not psf-convolve image.
         zpt : float, optional
             The magnitude zero point of the mock image.
+        mask : `~numpy.ndarray`, optional
+            Boolean mask that is set to True for stars you want to inject.
+            If None, all stars will be injected.
 
         Returns
         -------
@@ -528,7 +543,7 @@ class ArtImager(Imager):
             sky_counts = 0
         counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
         src_counts = self.inject_stars(source.x, source.y,
-                                       counts, source.xy_dim)
+                                       counts, source.xy_dim, mask)
         src_counts = self.inject_smooth_model(src_counts, source,
                                               bandpass, exptime, zpt)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)

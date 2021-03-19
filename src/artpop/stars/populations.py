@@ -280,10 +280,11 @@ class SSP(StellarPopulation):
         Isochrone object.
     num_stars : int or `None`
         Number of stars in source. If `None`, then must give `total_mass`.
-    total_mass : float or `None`
+    total_mass : float or `~astropy.units.Quantity` or `None`
         Stellar mass of the source. If `None`, then must give `num_stars`. This
-        mass accounts for stellar remnants, so the actual sampled mass will be
-        less than the given value.
+        mass accounts for stellar remnants when ``add_remnants = True``, which
+        means the actual sampled mass will be less than the given value. If
+        float is given, the units are assumed to be solar masses.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
@@ -303,6 +304,10 @@ class SSP(StellarPopulation):
         Tolerance in the fractional difference between the input mass and the
         final mass of the population. The parameter is only used when
         `total_mass` is given.
+    add_remnants : bool, optional
+        If True (default), apply scaling factor to total mass to account for
+        stellar remnants in the form of white dwarfs, neutron stars,
+        and black holes.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -313,17 +318,18 @@ class SSP(StellarPopulation):
     def __init__(self, isochrone, num_stars=None, total_mass=None,
                  distance=10*u.pc, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw={}, mass_tolerance=0.01,
-                 random_state=None):
+                 add_remnants=True, random_state=None):
         super(SSP, self).__init__(distance=distance, imf=imf, imf_kw=imf_kw)
         self.isochrone = isochrone
         self.filters = isochrone.filters
         self.mag_limit = mag_limit
         self.mag_limit_band = mag_limit_band
         self.rng = check_random_state(random_state)
-        self.build_pop(num_stars, total_mass, mass_tolerance)
-        self._r = {'M_star': f'{self.total_mass:.2e} M_sun'}
+        self.build_pop(num_stars, total_mass, mass_tolerance, add_remnants)
+        self._r = {'M_star': f'{self.total_mass.value:.2e} M_sun'}
 
-    def build_pop(self, num_stars=None, total_mass=None, mass_tolerance=0.01):
+    def build_pop(self, num_stars=None, total_mass=None, mass_tolerance=0.01,
+                  add_remnants=True):
         """
         Build the stellar population. You must give `total_mass`
         *or* `num_stars` as an argument.
@@ -332,18 +338,27 @@ class SSP(StellarPopulation):
         ----------
         num_stars : int or `None`
             Number of stars in source. If `None`, then must give `total_mass`.
-        total_mass : float or `None`
-            Stellar mass of the source in solar masses. If `None`, then must
-            give `num_stars`. Note this mass includes stellar remnants, so
-            the sampled stellar mass will less than this total.
+        total_mass : float or `~astropy.units.Quantity` or `None`
+            Stellar mass of the source. If `None`, then must give `num_stars`.
+            This mass accounts for stellar remnants when ``add_remnants = True``
+            which means the actual sampled mass will be less than the given
+            value. If float is given, the units are assumed to be solar masses.
+        mass_tolerance : float, optional
+            Tolerance in the fractional difference between the input mass and
+            the final mass of the population. The parameter is only used when
+            `total_mass` is given.
+        add_remnants : bool, optional
+            If True (default), apply scaling factor to total mass to account
+            for stellar remnants in the form of white dwarfs, neutron stars,
+            and black holes.
         """
 
         # get isochrone object and info
         m_min, m_max = self.isochrone.m_min, self.isochrone.m_max
         imf_kw = self.imf_kw.copy()
         iso = self.isochrone
-        remnants_factor = self._remnants_factor()
         imfint = IMFIntegrator(self.imf, m_min=m_min, m_max=m_max)
+        remnants_factor = self._remnants_factor() if add_remnants else 1.0
 
         # calculate the fraction of stars we will sample
         m_lim, f_num_sampled, f_mass_sampled = self.sample_fraction(
@@ -375,6 +390,8 @@ class SSP(StellarPopulation):
             self.sampled_mass = self.star_masses.sum()
 
         elif total_mass is not None:
+
+            total_mass = check_units(total_mass, 'Msun').to('Msun').value
 
             # calculate fraction of mass that remains after mass loss
             mass_loss = iso.ssp_surviving_mass(
@@ -455,14 +472,16 @@ class SSP(StellarPopulation):
                 ff += np.sum(10**(-0.8 * evolved_mags[filt]))
                 log_dddd = 4 * np.log10((10 * u.pc).to('cm').value)
                 self._integrated_log_lumlum[filt] = np.log10(ff) + log_dddd
-
         else:
-
             # calculate total_mass with stellar remnants
             self.total_mass = self.sampled_mass / remnants_factor
 
         self.live_star_mass = self.total_mass * remnants_factor
         self.ssp_labels = np.ones(len(self.star_masses), dtype=int)
+
+        self.total_mass *= u.Msun
+        self.sampled_mass *= u.Msun
+        self.live_star_mass *= u.Msun
 
         for attr in ['eep', 'log_L', 'log_Teff']:
             if hasattr(iso, attr):
@@ -619,10 +638,11 @@ class MISTSSP(SSP):
         Name of the photometric system(s).
     num_stars : int or `None`
         Number of stars in source. If `None`, then must give `total_mass`.
-    total_mass : float or `None`
+    total_mass : float or `~astropy.units.Quantity` or `None`
         Stellar mass of the source. If `None`, then must give `num_stars`. This
-        mass accounts for stellar remnants, so the actual sampled mass will be
-        less than the given value.
+        mass accounts for stellar remnants when ``add_remnants = True``, which
+        means the actual sampled mass will be less than the given value. If
+        float is given, the units are assumed to be solar masses.
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
@@ -645,6 +665,10 @@ class MISTSSP(SSP):
         Tolerance in the fractional difference between the input mass and the
         final mass of the population. The parameter is only used when
         `total_mass` is given.
+    add_remnants : bool, optional
+        If True (default), apply scaling factor to total mass to account for
+        stellar remnants in the form of white dwarfs, neutron stars,
+        and black holes.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -652,13 +676,14 @@ class MISTSSP(SSP):
         return it. Otherwise raise ``ValueError``.
     """
 
-    phases = ['MS', 'giants', 'RGB', 'CHeB', 'AGB',
+    phases = ['PMS', 'MS', 'giants', 'RGB', 'CHeB', 'AGB',
               'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
     def __init__(self, log_age, feh, phot_system, num_stars=None,
                  total_mass=None, distance=10*u.pc, mag_limit=None,
                  mag_limit_band=None, imf='kroupa', mist_path=MIST_PATH,
-                 imf_kw={}, mass_tolerance=0.05, random_state=None, **kwargs):
+                 imf_kw={}, mass_tolerance=0.05, add_remnants=True,
+                 random_state=None, **kwargs):
 
         self.feh = feh
         self.log_age = log_age
@@ -676,6 +701,7 @@ class MISTSSP(SSP):
             imf=imf,
             imf_kw=imf_kw,
             mass_tolerance=mass_tolerance,
+            add_remnants=add_remnants,
             random_state=random_state
         )
 
@@ -707,6 +733,8 @@ class MISTSSP(SSP):
         """
         if phase == 'all':
             mask = np.ones_like(self.eep, dtype=bool)
+        elif phase == 'PMS':
+            mask = self.eep < 202
         elif phase == 'MS':
             mask = (self.eep >= 202) & (self.eep < 454)
         elif phase == 'giants':
@@ -730,6 +758,15 @@ class MISTSSP(SSP):
 
         return mask
 
+    def get_star_phases(self):
+        """Returns the stellar phases (as defined by the MIST EEPs)."""
+        phase_list = ['PMS', 'MS', 'RGB', 'CHeB', 'EAGB',
+                      'TPAGB', 'postAGB', 'WDCS']
+        star_phases = np.array([''] * self.num_stars, dtype='<U8')
+        for phase in phase_list:
+            star_phases[self.select_phase(phase)] = phase
+        return star_phases
+
 
 class CompositePopulation(SSP):
     """
@@ -745,7 +782,7 @@ class CompositePopulation(SSP):
         num_fracs = self.ssp_num_fracs
         mass_fracs = self.ssp_mass_fracs
         r = {'N_pops': self.num_pops,
-             'M_star': f'{self.total_mass:.2e} M_sun',
+             'M_star': f'{self.total_mass.value:.2e} M_sun',
              'number fractions': [f'{p * 100:.2f}%' for p in num_fracs],
              'mass fractions': [f'{p * 100:.2f}%' for p in mass_fracs]}
         if hasattr(self, 'log_age'):
