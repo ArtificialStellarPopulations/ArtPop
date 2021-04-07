@@ -72,7 +72,7 @@ class ArtObservation(BaseObservation):
     """Return object for the artificial imager."""
 
     def __init__(self, raw_counts, src_counts, sky_counts, image,
-                 var_image, calibration, zpt, bandpass, exptime):
+                 var_image, calibration, zpt, bandpass, exptime, mag_error):
         self.raw_counts = raw_counts
         self.src_counts = src_counts
         self.sky_counts = sky_counts
@@ -82,6 +82,7 @@ class ArtObservation(BaseObservation):
         self.zpt = zpt
         self.bandpass = bandpass
         self.exptime = exptime
+        self.mag_error = mag_error
 
 
 mAB_0 = 48.6
@@ -443,6 +444,7 @@ class ArtImager(Imager):
         cali_factor = 10**(0.4 * zpt) * 10**(0.4 * mAB_0) / lam_factor
         cali_factor /= exptime.to('s').value
         cali_factor /= self.area.to('cm2').value
+        cali_factor /= self.efficiency
         return cali_factor
 
     def inject_smooth_model(self, image, source, bandpass, exptime, zpt):
@@ -536,19 +538,21 @@ class ArtImager(Imager):
         self._check_bandpass(bandpass)
         self._check_source(source)
         exptime = check_units(exptime, 's')
-        if sky_sb is not None:
-            sky_counts = self.sb_to_counts_per_pixel(
-                sky_sb, bandpass, exptime, source.pixel_scale)
-        else:
-            sky_counts = 0
         counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
         src_counts = self.inject_stars(source.x, source.y,
                                        counts, source.xy_dim, mask)
         src_counts = self.inject_smooth_model(src_counts, source,
                                               bandpass, exptime, zpt)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)
-        if sky_sb is None:
+        if sky_sb is not None:
+            sky_counts = self.sb_to_counts_per_pixel(
+                sky_sb, bandpass, exptime, source.pixel_scale)
+            n_s = np.sqrt(self.read_noise**2 + sky_counts + counts) / counts
+            mag_error = 2.5 * np.log10(1 + n_s)
+        else:
             src_counts[src_counts < 0] = 0
+            sky_counts = 0
+            mag_error = None
         raw_counts = self.rng.poisson(src_counts + sky_counts)
         if self.read_noise > 0.0:
             rn = self.rng.normal(scale=self.read_noise, size=src_counts.shape)
@@ -565,6 +569,7 @@ class ArtImager(Imager):
             calibration=cali,
             zpt=zpt,
             bandpass=bandpass,
-            exptime=exptime
+            exptime=exptime,
+            mag_error=mag_error
         )
         return observation

@@ -59,7 +59,6 @@ class Isochrone(object):
             self.mag_table = mags
         else:
             raise Exception(f'{type(mags)} is not a valid type for mags')
-        self._filters = self.mag_table.colnames
 
     @property
     def m_min(self):
@@ -74,7 +73,73 @@ class Isochrone(object):
     @property
     def filters(self):
         """List of filters in the given photometric system(s)."""
-        return self._filters
+        return self.mag_table.colnames
+
+    @staticmethod
+    def from_parsec(file_name, log_age=None, zini=None, num_filters=None):
+        """
+        Read isochrone generated from the `PARSEC website
+        <http://stev.oapd.inaf.it/cgi-bin/cmd>`_. If more than one age and/or
+        metallicity is included in the file, you must provide the log_age
+        and/or zini parameters.
+
+
+        Parameters
+        ----------
+        file_name : str
+            Isochrone file name.
+        log_age : float, optional
+            Log of age in years. You must provided this parameter if there is
+            more than one age in the isochrone file. Note this function does
+            not interpolate ages, so it must be included in the file.
+        zini : float, optional
+            Initial metal fraction. You must provided this parameter if there
+            is more than one metallicity in the isochrone file. Note this
+            function does not interpolate metallicity, so it must be included
+            in the file.
+        num_filters : int, optional
+            Number of filters included in the isochrone file. If None, will
+            assume the last non-filter parameter is `mbolmag`.
+
+        Returns
+        -------
+        iso : `artpop.stars.Isochrone`
+            PARSEC Isochrone object.
+        """
+        if os.path.isfile(file_name):
+            file = open(file_name, 'r')
+            lines = file.readlines()
+            file.close()
+            for l in lines:
+                if 'Zini' in l.split()[1]:
+                    names = l.split()[1:]
+                    break
+            data = np.loadtxt(file_name)
+            parsec = Table(data, names=names)
+        else:
+            raise Exception(f'{file_name} does not exist.')
+        isochrone_full = parsec.copy()
+        if log_age is not None:
+            age_cut = np.abs(parsec['logAge'] - log_age) < 1e-5
+            if age_cut.sum() < 1:
+                raise Exception(f'log_age = {log_age} not found.')
+            parsec = parsec[age_cut]
+        if zini is not None:
+            zini_cut = np.abs(parsec['Zini'] - zini) < 1e-8
+            if zini_cut.sum() < 1:
+                raise Exception(f'Zini = {zini} not found.')
+            parsec = parsec[zini_cut]
+        if num_filters is None:
+            filt_idx = np.argwhere(np.array(names) == 'mbolmag')[0][0] + 1
+        else:
+            filt_idx = len(names) - num_filters
+        iso = Isochrone(mini=parsec['Mini'],
+                        mact=parsec['Mass'],
+                        mags=parsec[names[filt_idx:]],
+                        log_L=parsec['logL'],
+                        log_Teff=parsec['logTe'])
+        iso.isochrone_full = isochrone_full
+        return iso
 
     def interpolate(self, y_name, x_interp, x_name='mini',
                     slice_interp=np.s_[:], **kwargs):

@@ -740,9 +740,9 @@ class MISTSSP(SSP):
         elif phase == 'giants':
             mask = (self.eep >= 454) & (self.eep < 1409)
         elif phase == 'RGB':
-            mask = (self.eep >= 454) & (self.eep < 605)
+            mask = (self.eep >= 454) & (self.eep <= 605)
         elif phase == 'CHeB':
-            mask = (self.eep >= 605) & (self.eep < 707)
+            mask = (self.eep > 605) & (self.eep < 707)
         elif phase == 'AGB':
             mask = (self.eep >= 707) & (self.eep < 1409)
         elif phase == 'EAGB':

@@ -43,7 +43,7 @@ mpl_style = {
 
 
 def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
-               rasterized=False, **kwargs):
+               figsize=(10, 10), **kwargs):
     """
     Display image using matplotlib.
 
@@ -59,10 +59,10 @@ def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
         new figure will be created.
     cmap : str, optional
         ``matplotlib`` color map.
-    rasterized : bool, optional
-        If True, set `rasterized=True` in `~matplotlib.pyplot.imshow`.
+    figsize : tuple, optional
+         Figure size. Only used if subplots is None.
     **kwargs
-        Keyword arguments for `~matplotlib.pyplot.subplots`.
+        Keyword arguments for `~matplotlib.pyplot.imshow`.
 
     Returns
     -------
@@ -72,17 +72,18 @@ def show_image(image, percentile=[0.1, 99.9], subplots=None, cmap='gray_r',
         The axis.
     """
     if subplots is None:
-        figsize = kwargs.pop('figsize', (10, 10))
         fig, ax = plt.subplots(figsize=figsize,
-                               subplot_kw=dict(xticks=[], yticks=[]),
-                               **kwargs)
+                               subplot_kw=dict(xticks=[], yticks=[]))
+
     else:
         fig, ax = subplots
     if percentile is not None:
         vmin, vmax = np.nanpercentile(image, percentile)
     else:
         vmin, vmax = None, None
-    ax.imshow(image, origin='lower', cmap=cmap, rasterized=rasterized,
-              vmin=vmin, vmax=vmax)
+
+    interp = kwargs.pop('interpolation', None)
+    ax.imshow(image, origin='lower', cmap=cmap, vmin=vmin, vmax=vmax,
+              interpolation=interp, **kwargs)
 
     return fig, ax
