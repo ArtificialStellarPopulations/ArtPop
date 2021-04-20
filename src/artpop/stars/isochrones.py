@@ -294,14 +294,14 @@ class Isochrone(object):
         return m_nearest, arg_nearest
 
     def imf_weights(self, imf, m_min_norm=None, m_max_norm=120,
-                    norm_type='mass'):
+                    norm_type='mass', **kwargs):
         """
         Calculate IMF weights.
 
         Parameters
         ----------
-        imf : str
-            IMF name
+        imf : str or callable function that takes mass as its argument
+            Stellar Initial mass function.
         m_min_norm : None or float, optional
             Minimum mass for the normalization. Must be less than or equal to
             the mini mass of isochrone, which will be used if None is given.
@@ -320,10 +320,13 @@ class Isochrone(object):
         m_max = m_max_norm if m_max_norm else self.mini.max()
         if m_min > self.m_min:
             raise Exception('Minimum mass must be <= isochrone min mass.')
-        imf_func = lambda m: imf_dict[imf](m, norm_type=None)
+        if callable(imf):
+            imf_func = imf
+        else:
+            imf_func = lambda m: imf_dict[imf](m, norm_type=None)
         m_imf_func = lambda m: m * imf_func(m)
         norm_func = dict(mass=m_imf_func, number=imf_func)[norm_type]
-        norm = quad(norm_func, m_min, m_max)[0]
+        norm = quad(norm_func, m_min, m_max, **kwargs)[0]
 
         wght = []
         mini = self.mini
@@ -341,7 +344,7 @@ class Isochrone(object):
                 m2 = mini[i] + 0.5 * (mini[i+1] - mini[i])
             if m2 < m1:
                 raise Exception('Masses must be monotonically increasing.')
-            wght.append(quad(imf_func, m1, m2)[0])
+            wght.append(quad(imf_func, m1, m2, **kwargs)[0])
         wght = np.array(wght) / norm
         return wght
 
