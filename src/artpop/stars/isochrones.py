@@ -623,6 +623,11 @@ class MISTIsochrone(Isochrone):
         """MIST entire isochrone in a structured `~numpy.ndarray`."""
         return self._iso_full
 
+    @staticmethod
+    def from_parsec(fn, **kwargs):
+        msg = 'PARSEC isochrones do not with MISTIsochrone.'
+        raise Exception(msg + ' Use artpop.Isochrone instead.')
+
     def _fetch_iso(self, phot_system):
         """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
         if self.feh in self._feh_grid:
