@@ -90,6 +90,9 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         factor = m_without_remnants / m_with_remnants
         return factor
 
+    def copy(self):
+        return deepcopy(self)
+
     def set_distance(self, distance):
         """
         Change the distance to the stellar population.
