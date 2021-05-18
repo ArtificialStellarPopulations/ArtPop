@@ -23,7 +23,7 @@ from ..log import logger
 __all__ = ['IdealObservation', 'ArtObservation', 'IdealImager', 'ArtImager']
 
 
-class BaseObservation(metaclass=abc.ABCMeta):
+class Observation(metaclass=abc.ABCMeta):
 
     def to_pickle(self, file_name):
         """Pickle observation object."""
@@ -59,7 +59,7 @@ class BaseObservation(metaclass=abc.ABCMeta):
         return deepcopy(self)
 
 
-class IdealObservation(BaseObservation):
+class IdealObservation(Observation):
     """Return object for the ideal imager."""
 
     def __init__(self, image, zpt, bandpass):
@@ -68,7 +68,7 @@ class IdealObservation(BaseObservation):
         self.bandpass = bandpass
 
 
-class ArtObservation(BaseObservation):
+class ArtObservation(Observation):
     """Return object for the artificial imager."""
 
     def __init__(self, raw_counts, src_counts, sky_counts, image,
