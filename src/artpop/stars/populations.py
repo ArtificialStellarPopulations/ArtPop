@@ -56,9 +56,9 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         return 1 if type(self.isochrone) != list else len(self.isochrone)
 
     @property
-    def total_initial_mass(self):
+    def total_initial_live_mass(self):
         """Total initial stellar mass in solar units."""
-        return self.initial_masses.sum()
+        return self.initial_masses.sum() * u.M_sun
 
     @property
     def num_stars(self):
