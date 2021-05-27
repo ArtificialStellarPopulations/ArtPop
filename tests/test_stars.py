@@ -3,48 +3,49 @@ import os
 
 # Third-party
 import numpy as np
+from astropy.table import Table
 import pytest
 
 # Project
-from artpop.util import MIST_PATH
-from artpop.filters import phot_system_list, phot_system_lookup
-from artpop.stars import MistIsochrone, SSP, imf
+from artpop.util import data_dir
+from artpop.stars import Isochrone, SSP, imf
+iso_fn = os.path.join(data_dir, 'feh_m1.00_vvcrit0.4_LSST_10gyr_test_iso')
 
 
-if MIST_PATH is not None:
-    p = phot_system_list
-    mist_dir = os.listdir(MIST_PATH)
-    grids = [g for g in mist_dir if g[:4]=='MIST' and g.split('_')[-1] in p]
-    has_grids = len(grids) > 0
-    if has_grids:
-        phot_system = grids[0].split('_')[-1]
-        version = float(grids[0].split('_')[1][1:])
-        v = float(grids[0].split('_')[2][6:])
-else:
-    has_grids = False
+def test_isochrone():
+    iso_table = Table.read(iso_fn, format='ascii')
+    mag_cols = ['LSST_u', 'LSST_g', 'LSST_r', 'LSST_i', 'LSST_z', 'LSST_y']
+    iso = Isochrone(
+        mini=iso_table['initial_mass'],
+        mact=iso_table['star_mass'],
+        mags=iso_table[mag_cols]
+    )
+    assert np.isclose(iso.ssp_mag('LSST_i'), 5.690581263723638)
+    assert np.isclose(iso.ssp_surviving_mass('salpeter'), 0.7014040567731574)
+    m_no_rem = iso.ssp_surviving_mass('salpeter', add_remnants=False)
+    assert np.isclose(m_no_rem, 0.580936948329605)
+    assert np.isclose(iso.ssp_color('LSST_u', 'LSST_y'), 2.232094935936278)
+    assert np.isclose(iso.ssp_sbf_mag('LSST_i'), -1.4292710596351692)
 
 
-@pytest.mark.skipif(not has_grids, reason='No MIST grids found')
-def test_mist_isochrone():
-    mist = MistIsochrone(10, -1, phot_system, version=version, v_over_vcrit=v)
-    assert phot_system_lookup(mist.filters[0]) == phot_system
-    assert mist.mass_min < mist.mass_max
-    assert mist.filters[0] in mist.iso.dtype.names
-
-
-@pytest.mark.skipif(not has_grids, reason='No MIST grids found')
 def test_ssp():
-    ssp_1 = SSP(10, -1.12, phot_system, num_stars=1e5, 
-                version=version, v_over_vcrit=v)
-    ssp_2 = SSP(9, -1.4, phot_system, num_stars=1e5, 
-                version=version, v_over_vcrit=v)
-    ssp = ssp_1 + ssp_2
-    filt = ssp.filters[0]
-    assert ssp.num_stars == 2e5
-    assert ssp_1.num_stars + ssp_2.num_stars == 2e5
-    assert ssp.total_mag(filt) < ssp_1.total_mag(filt)
-    assert ssp.total_mag(filt) < ssp_2.total_mag(filt)
-    assert ssp.get_phase_mask('MS').sum() > ssp.get_phase_mask('RGB').sum()
+    iso_table = Table.read(iso_fn, format='ascii')
+    mag_cols = ['LSST_u', 'LSST_g', 'LSST_r', 'LSST_i', 'LSST_z', 'LSST_y']
+    iso = Isochrone(
+        mini=iso_table['initial_mass'],
+        mact=iso_table['star_mass'],
+        mags=iso_table[mag_cols]
+    )
+
+    ssp = SSP(iso, num_stars=1e5, random_state=1)
+    assert np.allclose(ssp.total_mass.value, 42503.7698205372)
+    assert np.allclose(ssp.total_initial_live_mass.value, 30038.3808820988)
+
+    ssp_2 = SSP(iso, num_stars=1e5, random_state=11)
+    csp = ssp + ssp_2
+    assert csp.num_stars == 200000
+    assert ssp.total_mass + ssp_2.total_mass == csp.total_mass
+    assert np.isclose(csp.mean_mag('LSST_z'), 5.900790585790645)
 
 
 def test_imf():

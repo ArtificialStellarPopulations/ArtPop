@@ -23,7 +23,7 @@ from ..log import logger
 __all__ = ['IdealObservation', 'ArtObservation', 'IdealImager', 'ArtImager']
 
 
-class BaseObservation(metaclass=abc.ABCMeta):
+class Observation(metaclass=abc.ABCMeta):
 
     def to_pickle(self, file_name):
         """Pickle observation object."""
@@ -59,7 +59,7 @@ class BaseObservation(metaclass=abc.ABCMeta):
         return deepcopy(self)
 
 
-class IdealObservation(BaseObservation):
+class IdealObservation(Observation):
     """Return object for the ideal imager."""
 
     def __init__(self, image, zpt, bandpass):
@@ -68,7 +68,7 @@ class IdealObservation(BaseObservation):
         self.bandpass = bandpass
 
 
-class ArtObservation(BaseObservation):
+class ArtObservation(Observation):
     """Return object for the artificial imager."""
 
     def __init__(self, raw_counts, src_counts, sky_counts, image,
@@ -294,6 +294,10 @@ class ArtImager(Imager):
         Filter system object with filter curves for the filters you use to
         create artificial images. This object calculates `dlam` and `lam_eff`
         for converting magnitudes into counts.
+    zpt_inst : dictionary, optional
+        Instrumental zero points. If not None, this alone sets the magnitude
+        associated with 1 count per second. This parameter takes precedence;
+        the diameter and all filter parameters will be ignored.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -303,16 +307,20 @@ class ArtImager(Imager):
 
     def __init__(self, phot_system=None, diameter=10, read_noise=0.0,
                  efficiency=1.0, dlam=None, lam_eff=None, filter_system=None,
-                 random_state=None):
+                 zpt_inst=None, random_state=None):
 
         self.efficiency = efficiency
         self.read_noise = read_noise
         self.diameter = check_units(diameter, 'm')
         self.rng = check_random_state(random_state)
 
-        self.dlam = {}
-        self.lam_eff = {}
+        self.dlam = None
+        self.lam_eff = None
+        self.filters = None
+        self.zpt_inst = None
         if phot_system is not None:
+            self.dlam = {}
+            self.lam_eff = {}
             self.phot_system = phot_system
             self.filters = get_filter_names(phot_system)
             prop_fn = os.path.join(data_dir, 'filter_properties.fits')
@@ -321,6 +329,9 @@ class ArtImager(Imager):
                 select = props['bandpass'] == filt
                 self.dlam[filt] = props[select]['dlam'][0]
                 self.lam_eff[filt] = props[select]['lam_eff'][0]
+        elif zpt_inst is not None:
+            self.filters = list(zpt_inst.keys())
+            self.zpt_inst = zpt_inst
         elif dlam is not None:
             assert lam_eff is not None, 'must give both dlam and lam_eff'
             self.filters = list(dlam.keys())
@@ -337,9 +348,11 @@ class ArtImager(Imager):
             msg = 'must give phot_system or (dlam, lam_eff) or filter_system.'
             raise Exception('In order to convert mags to counts, you ' + msg)
 
-        for filt in self.filters:
-            self.dlam[filt] = check_units(self.dlam[filt], 'angstrom')
-            self.lam_eff[filt] = check_units(self.lam_eff[filt], 'angstrom')
+        if self.zpt_inst is None:
+            for filt in self.filters:
+                self.dlam[filt] = check_units(self.dlam[filt], 'angstrom')
+                self.lam_eff[filt] = check_units(
+                    self.lam_eff[filt], 'angstrom')
 
     @property
     def area(self):
@@ -369,14 +382,19 @@ class ArtImager(Imager):
         """
         exptime = check_units(exptime, 's')
         fnu = fnu_from_AB_mag(mags)
-        dlam = self.dlam[bandpass]
-        lam_eff = self.lam_eff[bandpass]
-        photon_flux = (dlam / lam_eff) * fnu / constants.h.to('erg s')
-        counts = photon_flux * self.area.to('cm2') * exptime.to('s')
-        counts = counts.decompose()
-        assert counts.unit == u.dimensionless_unscaled
-        counts *= self.efficiency
-        return counts.value
+        if self.zpt_inst is None:
+            dlam = self.dlam[bandpass]
+            lam_eff = self.lam_eff[bandpass]
+            photon_flux = (dlam / lam_eff) * fnu / constants.h.to('erg s')
+            counts = photon_flux * self.area.to('cm2') * exptime.to('s')
+            counts = counts.decompose()
+            assert counts.unit == u.dimensionless_unscaled
+            counts *= self.efficiency
+            counts = counts.value
+        else:
+            photon_flux = fnu * 10**(0.4 * (self.zpt_inst[bandpass] + mAB_0))
+            counts = (photon_flux * exptime.to('s')).value
+        return counts
 
     def sb_to_counts_per_pixel(self, sb, bandpass, exptime, pixel_scale):
         """
@@ -402,21 +420,27 @@ class ArtImager(Imager):
             Counts per pixel associated with the given surface brightness.
         """
         exptime = check_units(exptime, 's')
-        dlam = self.dlam[bandpass]
-        lam_eff = self.lam_eff[bandpass]
-        pixel_scale = pixel_scale.to('arcsec / pixel')
-        E_lam = (constants.h * constants.c / lam_eff).decompose().to('erg')
         fnu_per_square_arcsec = fnu_from_AB_mag(sb) / u.arcsec**2
-        flam_per_square_arcsec = fnu_per_square_arcsec *\
-            constants.c.to('angstrom/s') / lam_eff**2
-        flam_per_pixel = flam_per_square_arcsec * pixel_scale**2
-        photon_flux_per_sq_pixel = (flam_per_pixel * dlam / E_lam).\
-            decompose().to('1/(cm2*pix2*s)')
-        counts_per_pixel = photon_flux_per_sq_pixel * exptime.to('s')
-        counts_per_pixel *= self.area.to('cm2') * u.pixel**2
-        assert counts_per_pixel.unit == u.dimensionless_unscaled
-        counts_per_pixel *= self.efficiency
-        return counts_per_pixel.value
+        if self.zpt_inst is None:
+            dlam = self.dlam[bandpass]
+            lam_eff = self.lam_eff[bandpass]
+            pixel_scale = pixel_scale.to('arcsec / pixel')
+            E_lam = (constants.h * constants.c / lam_eff).decompose().to('erg')
+            flam_per_square_arcsec = fnu_per_square_arcsec *\
+                constants.c.to('angstrom/s') / lam_eff**2
+            flam_per_pixel = flam_per_square_arcsec * pixel_scale**2
+            photon_flux_per_sq_pixel = (flam_per_pixel * dlam / E_lam).\
+                decompose().to('1/(cm2*pix2*s)')
+            counts_per_pixel = photon_flux_per_sq_pixel * exptime.to('s')
+            counts_per_pixel *= self.area.to('cm2') * u.pixel**2
+            assert counts_per_pixel.unit == u.dimensionless_unscaled
+            counts_per_pixel *= self.efficiency
+            counts_per_pixel = counts_per_pixel.value
+        else:
+            factor = 10**(0.4 * (self.zpt_inst[bandpass] + mAB_0))
+            fnu_per_pixel = (fnu_per_square_arcsec * pixel_scale**2).value
+            counts_per_pixel = fnu_per_pixel * factor * exptime.to('s').value
+        return counts_per_pixel
 
     def calibration(self, bandpass, exptime, zpt=27.0):
         """
@@ -439,12 +463,16 @@ class ArtImager(Imager):
         cali_factor : float
             The calibration factor.
         """
-        dlam_over_lam = self.dlam[bandpass] / self.lam_eff[bandpass]
-        lam_factor = (dlam_over_lam / constants.h.cgs).value
-        cali_factor = 10**(0.4 * zpt) * 10**(0.4 * mAB_0) / lam_factor
-        cali_factor /= exptime.to('s').value
-        cali_factor /= self.area.to('cm2').value
-        cali_factor /= self.efficiency
+        if self.zpt_inst is None:
+            dlam_over_lam = self.dlam[bandpass] / self.lam_eff[bandpass]
+            lam_factor = (dlam_over_lam / constants.h.cgs).value
+            cali_factor = 10**(0.4 * zpt) * 10**(0.4 * mAB_0) / lam_factor
+            cali_factor /= exptime.to('s').value
+            cali_factor /= self.area.to('cm2').value
+            cali_factor /= self.efficiency
+        else:
+            cali_factor = 10**(0.4 * (zpt - self.zpt_inst[bandpass]))
+            cali_factor /= exptime.to('s').value
         return cali_factor
 
     def inject_smooth_model(self, image, source, bandpass, exptime, zpt):
