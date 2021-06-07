@@ -276,6 +276,10 @@ class MISTSersicSSP(SersicSP):
         Stellar mass of the source. If `None`, then must give `num_stars`. This
         mass accounts for stellar remnants, so the actual sampled mass will be
         less than the given value.
+    add_remnants : bool, optional
+        If True (default), apply scaling factor to total mass to account for
+        stellar remnants in the form of white dwarfs, neutron stars,
+        and black holes.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -315,16 +319,17 @@ class MISTSersicSSP(SersicSP):
 
     def __init__(self, log_age, feh, phot_system, r_eff, n, theta, ellip,
                  distance, xy_dim, pixel_scale, num_stars=None,
-                 total_mass=None, mag_limit=None, mag_limit_band=None,
-                 imf='kroupa', imf_kw={}, mist_path=MIST_PATH, num_r_eff=10,
-                 mass_tolerance=0.01, dx=0, dy=0, label_type=None,
-                 random_state=None):
+                 total_mass=None, add_remnants=True, mag_limit=None,
+                 mag_limit_band=None, imf='kroupa', imf_kw={},
+                 mist_path=MIST_PATH, num_r_eff=10, mass_tolerance=0.01,
+                 dx=0, dy=0, label_type=None, random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            distance=distance, total_mass=total_mass,
                            num_stars=num_stars, imf=imf, mist_path=mist_path,
                            imf_kw=imf_kw, random_state=random_state,
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
+                           add_remnants=add_remnants,
                            mass_tolerance=mass_tolerance)
 
         ssp = MISTSSP(**self.ssp_kw)
@@ -458,6 +463,10 @@ class MISTPlummerSSP(PlummerSP):
         Stellar mass of the source. If `None`, then must give `num_stars`. This
         mass accounts for stellar remnants, so the actual sampled mass will be
         less than the given value.
+    add_remnants : bool, optional
+        If True (default), apply scaling factor to total mass to account for
+        stellar remnants in the form of white dwarfs, neutron stars,
+        and black holes.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -493,16 +502,17 @@ class MISTPlummerSSP(PlummerSP):
 
     def __init__(self, log_age, feh, phot_system, scale_radius,
                  distance, xy_dim, pixel_scale, num_stars=None,
-                 total_mass=None, mag_limit=None, mag_limit_band=None,
-                 imf='kroupa', imf_kw={}, mist_path=MIST_PATH,
-                 mass_tolerance=0.01, dx=0, dy=0, label_type=None,
-                 random_state=None):
+                 total_mass=None, add_remnants=True, mag_limit=None,
+                 mag_limit_band=None, imf='kroupa', imf_kw={},
+                 mist_path=MIST_PATH, mass_tolerance=0.01, dx=0, dy=0,
+                 label_type=None, random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            distance=distance, total_mass=total_mass,
                            num_stars=num_stars, imf=imf, mist_path=mist_path,
                            imf_kw=imf_kw, random_state=random_state,
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
+                           add_remnants=add_remnants,
                            mass_tolerance=mass_tolerance)
 
         ssp = MISTSSP(**self.ssp_kw)
