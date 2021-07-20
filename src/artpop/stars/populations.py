@@ -1,5 +1,6 @@
 # Standard library
 import os, abc
+import pickle
 import numpy as np
 from copy import deepcopy
 
@@ -77,6 +78,20 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         for filt in self.filters:
             _mags[filt] = self.star_mags(filt)
         return Table(_mags)
+
+    def to_pickle(self, file_name):
+        """Pickle stellar population object."""
+        pkl_file = open(file_name, 'wb')
+        pickle.dump(self, pkl_file)
+        pkl_file.close()
+
+    @staticmethod
+    def from_pickle(file_name):
+        """Load pickle of stellar population object."""
+        pkl_file = open(file_name, 'rb')
+        data = pickle.load(pkl_file)
+        pkl_file.close()
+        return data
 
     def _remnants_factor(self, **kwargs):
         """
