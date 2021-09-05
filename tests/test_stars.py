@@ -5,6 +5,7 @@ from unittest import TestCase
 
 # Third-party
 import numpy as np
+from astropy.table import Table
 
 # Project
 from artpop.util import data_dir
@@ -18,7 +19,7 @@ class TestStars(TestCase):
     def setUp(self):
         """Build single isochrone object for all test cases."""
         with open(iso_fn, 'rb') as f:
-            iso_table = pickle.load(f)
+            iso_table = Table(pickle.load(f))
         self.filters =['LSST_u', 'LSST_g', 'LSST_r',
                        'LSST_i', 'LSST_z', 'LSST_y']
         self.iso = Isochrone(
