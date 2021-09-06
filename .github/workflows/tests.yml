@@ -1,0 +1,25 @@
+name: Build and Test [Python 3.6, 3.7, 3.8]
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build using Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install dependencies [pip]
+        run: |
+          python -m pip install pip --upgrade pip
+          pip install -e .
+
+      - name: run unit tests [pytest]
+        run: pytest
