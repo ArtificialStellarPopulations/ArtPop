@@ -111,9 +111,9 @@ def xy_from_grid(num_stars, model, xy_dim, sample_dim=None,
     return xy
 
 
-def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
-              pixel_scale, num_r_eff=10, dx=0, dy=0, drop_outside=False,
-              random_state=None):
+def sersic_xy(num_stars, distance, xy_dim, pixel_scale, r_eff=500*u.pc, n=1.0,
+              theta=45*u.deg, ellip=0.3, num_r_eff=10, dx=0, dy=0,
+              drop_outside=False, random_state=None):
     """
     Sample xy positions from a two-dimensional Sersic distribution.
 
@@ -127,17 +127,6 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     ----------
     num_stars : int
         Number of stars (i.e., positions) to sample.
-    r_eff : float or `~astropy.units.Quantity`
-        Effective radius of the source. If a float is given, the units are
-        assumed to be `~astropy.units.kpc`. Must be greater than zero.
-    n : float
-        Sersic index. Must be greater than zero.
-    theta : float or `~astropy.units.Quantity`
-        Rotation angle, counterclockwise from the positive x-axis. If a float
-        is given, the units are assumed to be `degree`.
-    ellip : float
-        Ellipticity defined as `1 - b/a`, where `b` is the semi-minor axis
-        and `a` is the semi-major axis.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`.
@@ -147,6 +136,17 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
+    r_eff : float or `~astropy.units.Quantity`, optional
+        Effective radius of the source. If a float is given, the units are
+        assumed to be `~astropy.units.kpc`. Must be greater than zero.
+    n : float, optional
+        Sersic index. Must be greater than zero.
+    theta : float or `~astropy.units.Quantity`, optional
+        Rotation angle, counterclockwise from the positive x-axis. If a float
+        is given, the units are assumed to be `degree`.
+    ellip : float, optional
+        Ellipticity defined as `1 - b/a`, where `b` is the semi-minor axis
+        and `a` is the semi-major axis.
     num_r_eff : float, optional
         Number of r_eff to sample positions within. This parameter is needed
         because the current Sersic sampling function samples from within a
@@ -198,7 +198,7 @@ def sersic_xy(num_stars, r_eff, n, theta, ellip, distance, xy_dim,
     return xy
 
 
-def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
+def plummer_xy(num_stars, distance, xy_dim, pixel_scale, scale_radius=10*u.pc,
                dx=0, dy=0, drop_outside=False, random_state=None):
     """
     Sample xy positions from a two-dimensional Plummer distributions using
@@ -208,9 +208,6 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
     ----------
     num_stars : int
         Number of stars (i.e., positions) to sample.
-    scale_radius : float or `~astropy.units.Quantity`
-        Scale radius of the source. If a float is given, the units are
-        assumed to be `~astropy.units.kpc`. Must be greater than zero.
     distance : float or `~astropy.units.Quantity`
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`.
@@ -220,6 +217,9 @@ def plummer_xy(num_stars, scale_radius, distance, xy_dim, pixel_scale,
     pixel_scale : float or `~astropy.units.Quantity`
         The pixel scale of the mock image. If a float is given, the units will
         be assumed to be `~astropy.units.arcsec` per `~astropy.units.pixels`.
+    scale_radius : float or `~astropy.units.Quantity`, optional
+        Scale radius of the source. If a float is given, the units are
+        assumed to be `~astropy.units.kpc`. Must be greater than zero.
     dx : float, optional
         Shift from center of image in pixels in the x direction.
     dy : float, optional
