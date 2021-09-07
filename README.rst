@@ -9,7 +9,7 @@ Documentation
 -------------
 |Doc Status|
 
-The code is documented is hosted on `Read the Docs <https://artpop.readthedocs.io>`_.
+The code documentation is hosted on `Read the Docs <https://artpop.readthedocs.io>`_.
 
 License
 -------
