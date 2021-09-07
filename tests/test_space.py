@@ -36,6 +36,8 @@ class TestSpace(TestCase):
                 xy = self.functions[name](self.num_stars)
                 self.assertEqual(self.num_stars, len(xy))
                 self.assertLessEqual(abs(xy.mean() - 100), 1)
+                self.assertLess(xy.max(), 201)
+                self.assertGreaterEqual(xy.min(), 0)
 
     def test_grid_sampling(self):
         """Test sampling of spatial postions using the grid sampler."""
@@ -45,4 +47,6 @@ class TestSpace(TestCase):
                     self.num_stars, model(), 201, random_state=1985)
                 self.assertEqual(self.num_stars, len(xy))
                 self.assertTrue(isinstance(xy[10, 0], np.int64))
+                self.assertLess(xy.max(), 201)
+                self.assertGreaterEqual(xy.min(), 0)
 
