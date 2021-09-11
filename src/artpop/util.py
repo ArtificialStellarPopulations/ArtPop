@@ -216,7 +216,7 @@ def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4, version=1.2,
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
-            logger.info(f'Extracting grid from {os.path.basename(url)}.')
+        logger.info(f'Extracting grid from {os.path.basename(url)}.')
         with tarfile.open(tarball) as tar:
             tar.extractall(mist_path)
         os.remove(tarball)
