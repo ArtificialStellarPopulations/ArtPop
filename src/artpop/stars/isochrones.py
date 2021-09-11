@@ -14,7 +14,7 @@ from ._read_mist_models import IsoCmdReader, IsoReader
 from .imf import imf_dict, IMFIntegrator
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
-from ..util import MIST_PATH, check_units
+from ..util import MIST_PATH, check_units, fetch_mist_grid_if_needed
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
@@ -573,6 +573,10 @@ class MISTIsochrone(Isochrone):
 
     def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH,
                  v_over_vcrit=0.4, version=1.2):
+
+        # fetch the mist grid if necessary
+        fetch_mist_grid_if_needed(
+            phot_system, v_over_vcrit, version, mist_path)
 
         # verify age are metallicity are within model grids
         if log_age < self._log_age_min or log_age > self._log_age_max:

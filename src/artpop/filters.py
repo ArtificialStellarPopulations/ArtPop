@@ -9,7 +9,7 @@ from astropy import units as u
 from astropy.table import Table
 
 # Project
-from .util import data_dir
+from . import data_dir
 
 
 __all__ = ['phot_system_list',

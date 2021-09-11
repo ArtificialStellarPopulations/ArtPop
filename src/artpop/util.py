@@ -1,29 +1,38 @@
-#Standard library
+# Standard library
 import os
+import tarfile
 
 # Third-party
+import requests
 import numpy as np
 from astropy import units as u
 from astropy.utils.misc import isiterable
+
+# Project
+from .log import logger
+from .filters import phot_system_list
 
 
 __all__ = ['check_random_state',
            'check_units',
            'check_odd',
            'check_xy_dim',
-           'embed_slices']
-
-
-project_dir = os.path.dirname(os.path.dirname(__file__))
-package_dir = os.path.join(project_dir, 'artpop')
-data_dir = os.path.join(package_dir, 'data')
+           'embed_slices',
+           'fetch_mist_grid_if_needed']
 
 
 MIST_PATH = os.getenv('MIST_PATH')
 if MIST_PATH is None:
-    print('\033[33mWARNING:\033[0m Environment variable MIST_PATH does '
-          'not exist. You will need to pass the path to the MIST grids '
-          'to all functions that use them.')
+    MIST_PATH = os.path.join(os.path.expanduser('~'), '.artpop')
+    if not os.path.exists(MIST_PATH):
+        os.mkdir(MIST_PATH)
+    MIST_PATH = os.path.join(MIST_PATH, 'mist')
+    if not os.path.exists(MIST_PATH):
+        print('\033[33mWARNING:\033[0m Environment variable MIST_PATH does '
+              'not exist. When you first use a MIST grid, it will be '
+             f'downloaded and saved in {MIST_PATH}. To change this location, '
+              'create a MIST_PATH environment variable')
+        os.mkdir(MIST_PATH)
 
 
 def check_random_state(seed):
@@ -170,3 +179,44 @@ def embed_slices(center, model_shape, image_shape):
     mod_slice = np.s_[amin[0]:amax[0], amin[1]:amax[1]]
 
     return img_slice, mod_slice
+
+
+def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4, version=1.2,
+                              mist_path=MIST_PATH, overwrite=False):
+    """
+    If needed, fetch MIST grid from http://waps.cfa.harvard.edu/MIST.
+
+    Parameters
+    ----------
+    phot_system : str
+        Photometric system grid to fetch. Must be a supported ArtPop filter
+        system, where are listed in `~artpop.filters.phot_system_list`.
+    v_over_vcrit : float, optional
+        Rotation rate divided by the critical surface linear velocity. Current
+        options are 0.4 (default) and 0.0.
+    version : float, optional
+        MIST version number.
+    mist_path : str, optional
+        Path to MIST isochrone grids. Use this if you want to use a different
+        path from the default location of ~/.artpop/mist (or the `MIST_PATH`
+        environment variable if you have it set).
+    overwrite : bool, optional
+        If True, force an overwrite of grid if it exists.
+     """
+    if phot_system not in phot_system_list:
+        raise Exception(f'Photometric system must be in {phot_system_list}.')
+    url = f'http://waps.cfa.harvard.edu/MIST/data/tarballs_v{version}'
+    url += f'/MIST_v{version}_vvcrit{v_over_vcrit}_{phot_system}.txz'
+    tarball = os.path.join(mist_path, os.path.basename(url))
+    grid_path = tarball.replace('.txz', '')
+    if overwrite or not os.path.isdir(grid_path):
+        logger.info(f'Fetching MIST synthetic photometry grid for {phot_system}.')
+        r = requests.get(url, stream=True)
+        with open(tarball, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+            logger.info(f'Extracting grid from {os.path.basename(url)}.')
+        with tarfile.open(tarball) as tar:
+            tar.extractall(mist_path)
+        os.remove(tarball)

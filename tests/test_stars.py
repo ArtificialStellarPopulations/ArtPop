@@ -8,7 +8,7 @@ import numpy as np
 from astropy.table import Table
 
 # Project
-from artpop.util import data_dir
+from artpop import data_dir
 from artpop.stars import Isochrone, SSP, imf
 iso_fn = os.path.join(data_dir, 'feh_m1.00_vvcrit0.4_LSST_10gyr_test_iso.pkl')
 

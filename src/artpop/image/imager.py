@@ -14,7 +14,8 @@ from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
 
 # Project
-from ..util import check_units, check_random_state, data_dir
+from .. import data_dir
+from ..util import check_units, check_random_state
 from ..filters import FilterSystem, get_filter_names
 from ..source import Source
 from ..log import logger
