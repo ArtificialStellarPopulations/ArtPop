@@ -46,6 +46,7 @@ setup(
         'astropy>=4',
         'matplotlib>=3',
         'fast-histogram>=0.9',
+        'requests',
      ],
      classifiers=[
         "Programming Language :: Python :: 3",
