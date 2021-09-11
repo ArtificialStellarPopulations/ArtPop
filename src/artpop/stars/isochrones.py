@@ -490,7 +490,7 @@ class Isochrone(object):
 
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
-                       v_over_vcrit=0.4, version=1.2):
+                       v_over_vcrit=0.4):
     """
     Fetch MIST isochrone grid.
 
@@ -508,8 +508,6 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
     v_over_vcrit : float, optional
         Rotation rate divided by the critical surface linear velocity. Current
         options are 0.4 (default) and 0.0.
-    version : float, optional
-        MIST version number.
 
     Returns
     -------
@@ -518,7 +516,7 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
     """
 
     v = f'{v_over_vcrit:.1f}'
-    ver = f'v{version:.1f}'
+    ver = 'v1.2'
     p = phot_str_helper[phot_system.lower()]
     path = os.path.join(mist_path, 'MIST_' + ver + f'_vvcrit{v}_' + p)
     sign = 'm' if feh < 0 else 'p'
@@ -555,8 +553,6 @@ class MISTIsochrone(Isochrone):
     v_over_vcrit : float, optional
         Rotation rate divided by the critical surface linear velocity. Current
         options are 0.4 (default) and 0.0.
-    version : float, optional
-        MIST version number.
     """
 
     # the age grid
@@ -572,11 +568,10 @@ class MISTIsochrone(Isochrone):
     _feh_max = _feh_grid.max()
 
     def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH,
-                 v_over_vcrit=0.4, version=1.2):
+                 v_over_vcrit=0.4):
 
         # fetch the mist grid if necessary
-        fetch_mist_grid_if_needed(
-            phot_system, v_over_vcrit, version, mist_path)
+        fetch_mist_grid_if_needed(phot_system, v_over_vcrit, mist_path)
 
         # verify age are metallicity are within model grids
         if log_age < self._log_age_min or log_age > self._log_age_max:
@@ -587,7 +582,6 @@ class MISTIsochrone(Isochrone):
         self.feh = feh
         self.mist_path = mist_path
         self.phot_system = phot_system
-        self.version = version
         self.v_over_vcrit = v_over_vcrit
 
         # use nearest age (currently not interpolating on age)
@@ -636,7 +630,7 @@ class MISTIsochrone(Isochrone):
         """Fetch MIST isochrone grid, interpolating on [Fe/H] if necessary."""
         if self.feh in self._feh_grid:
             args = [self.log_age, self.feh, phot_system, self.mist_path,
-                    self.v_over_vcrit, self.version]
+                    self.v_over_vcrit]
             iso = fetch_mist_iso_cmd(*args)
         else:
             iso = self._interp_on_feh(phot_system)

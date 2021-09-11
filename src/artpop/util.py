@@ -181,7 +181,7 @@ def embed_slices(center, model_shape, image_shape):
     return img_slice, mod_slice
 
 
-def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4, version=1.2,
+def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4,
                               mist_path=MIST_PATH, overwrite=False):
     """
     If needed, fetch MIST grid from http://waps.cfa.harvard.edu/MIST.
@@ -194,8 +194,6 @@ def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4, version=1.2,
     v_over_vcrit : float, optional
         Rotation rate divided by the critical surface linear velocity. Current
         options are 0.4 (default) and 0.0.
-    version : float, optional
-        MIST version number.
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the default location of ~/.artpop/mist (or the `MIST_PATH`
@@ -205,6 +203,7 @@ def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4, version=1.2,
      """
     if phot_system not in phot_system_list:
         raise Exception(f'Photometric system must be in {phot_system_list}.')
+    version = 1.2
     url = f'http://waps.cfa.harvard.edu/MIST/data/tarballs_v{version}'
     url += f'/MIST_v{version}_vvcrit{v_over_vcrit}_{phot_system}.txz'
     tarball = os.path.join(mist_path, os.path.basename(url))
