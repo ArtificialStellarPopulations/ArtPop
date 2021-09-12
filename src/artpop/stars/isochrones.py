@@ -12,9 +12,10 @@ from astropy import units as u
 # Project
 from ._read_mist_models import IsoCmdReader, IsoReader
 from .imf import imf_dict, IMFIntegrator
+from .. import MIST_PATH
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
-from ..util import MIST_PATH, check_units, fetch_mist_grid_if_needed
+from ..util import check_units, fetch_mist_grid_if_needed
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
 

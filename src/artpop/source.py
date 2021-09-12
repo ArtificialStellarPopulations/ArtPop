@@ -9,9 +9,10 @@ from astropy.modeling.models import Sersic2D
 from scipy.special import gammaincinv, gamma
 
 # Project
+from . import MIST_PATH
 from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
-from .util import check_units, check_xy_dim, MIST_PATH
+from .util import check_units, check_xy_dim
 
 
 __all__ = [

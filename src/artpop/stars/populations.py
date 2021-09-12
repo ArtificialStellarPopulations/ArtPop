@@ -11,7 +11,8 @@ from astropy.table import Table
 from astropy import units as u
 
 # Project
-from ..util import check_random_state, check_units, MIST_PATH
+from .. import MIST_PATH
+from ..util import check_random_state, check_units
 from ..log import logger
 from ..filters import *
 from .imf import sample_imf, build_galaxy, imf_dict, IMFIntegrator
