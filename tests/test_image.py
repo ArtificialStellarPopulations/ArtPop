@@ -77,8 +77,10 @@ class TestImage(TestCase):
 
         obs = imager.observe(self.src, 'LSST_i', exptime=1*u.min, sky_sb=19)
         self.assertEqual((201, 201), obs.image.shape)
-        self.assertAlmostEqual(38869053.4881718, obs.image.sum())
-        self.assertAlmostEqual(962.0814705, obs.image.mean())
+        self.assertGreater(
+            0.02, 100 * (38869053 -  obs.image.sum()) / obs.image.sum())
+        self.assertGreater(
+            0.02, 100 * (962 - obs.image.mean()) / obs.image.mean())
 
         obs_smooth = imager.observe(
             self.src, 'LSST_i', exptime=1*u.min, sky_sb=19, psf=self.psf)
@@ -88,4 +90,3 @@ class TestImage(TestCase):
             self.src, 'LSST_i', exptime=1*u.hr, sky_sb=19)
         self.assertAlmostEqual(
             60.0, obs_long.raw_counts.mean() / obs.raw_counts.mean(), 1)
-
