@@ -582,7 +582,8 @@ class ArtImager(Imager):
             src_counts[src_counts < 0] = 0
             sky_counts = 0
             mag_error = None
-        raw_counts = self.rng.poisson(src_counts + sky_counts)
+        raw_counts = self.rng.poisson(
+            (src_counts + sky_counts).astype(np.float64))
         if self.read_noise > 0.0:
             rn = self.rng.normal(scale=self.read_noise, size=src_counts.shape)
             raw_counts = raw_counts + rn
