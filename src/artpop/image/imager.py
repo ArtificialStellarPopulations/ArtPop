@@ -583,11 +583,11 @@ class ArtImager(Imager):
             src_counts[src_counts < 0] = 0
             sky_counts = 0
             mag_error = None
-        # HACK: Using Normal distribution for Windows. The Poisson sampling
+        # HACK: Use Normal distribution for Windows. Poisson sampling
         # breaks in Windows due to long ints being 32 bit.
         if sys.platform =='win32':
             _c = src_counts + sky_counts
-            raw_counts = self.rng.normal(_c, np.sqrt(_c))
+            raw_counts = self.rng.normal(loc=_c, scale=np.sqrt(_c))
         else:
             raw_counts = self.rng.poisson(src_counts + sky_counts)
         if self.read_noise > 0.0:
