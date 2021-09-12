@@ -85,7 +85,7 @@ class TestImage(TestCase):
         self.assertLess(np.std(obs_smooth.image), np.std(obs.image))
 
         obs_long = imager.observe(
-            self.src, 'LSST_i', exptime=5*u.hr, sky_sb=19)
+            self.src, 'LSST_i', exptime=1*u.hr, sky_sb=19)
         self.assertAlmostEqual(
-            300.0, obs_long.raw_counts.mean() / obs.raw_counts.mean(), 1)
+            60.0, obs_long.raw_counts.mean() / obs.raw_counts.mean(), 1)
 
