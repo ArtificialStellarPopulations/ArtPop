@@ -1,4 +1,4 @@
-__version__ = "0.2"
+__version__ = "0.0.8"
 
 try:
     __ARTPOP_SETUP__
@@ -7,8 +7,7 @@ except NameError:
 
 if not __ARTPOP_SETUP__:
     import os
-    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    package_dir = os.path.join(project_dir, 'src/artpop')
+    package_dir = os.path.dirname(__file__)
     data_dir = os.path.join(package_dir, 'data')
     MIST_PATH = os.getenv('MIST_PATH')
     if MIST_PATH is None:

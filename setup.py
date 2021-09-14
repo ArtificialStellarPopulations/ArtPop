@@ -38,6 +38,7 @@ setup(
     author_email='artpopcode@gmail.com',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
+    package_data={"artpop": ["data/*.pkl", "data/*.fits", "data/*.txt"]},
     include_package_data=True,
     url='https://github.com/ArtificialStellarPopulations/ArtPop',
     install_requires=[
