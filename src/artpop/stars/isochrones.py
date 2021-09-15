@@ -283,7 +283,7 @@ class Isochrone(object):
         m : float:
             The mass for which we want the nearest initial mass.
 
-        Retruns
+        Returns
         -------
         m_nearest : float
             Value of the nearest mass.
