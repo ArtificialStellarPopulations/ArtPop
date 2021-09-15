@@ -1,4 +1,4 @@
-__version__ = "0.0.9"
+__version__ = "0.0.9.1"
 
 try:
     __ARTPOP_SETUP__
