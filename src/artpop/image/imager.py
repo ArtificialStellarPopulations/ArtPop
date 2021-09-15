@@ -10,14 +10,13 @@ import numpy as np
 from astropy.io import fits
 from astropy import constants
 from astropy import units as u
-from astropy.table import Table
 from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
 
 # Project
 from .. import data_dir
 from ..util import check_units, check_random_state
-from ..filters import FilterSystem, get_filter_names
+from ..filters import FilterSystem, get_filter_names, get_filter_properties
 from ..source import Source
 from ..log import logger
 
@@ -325,8 +324,7 @@ class ArtImager(Imager):
             self.lam_eff = {}
             self.phot_system = phot_system
             self.filters = get_filter_names(phot_system)
-            prop_fn = os.path.join(data_dir, 'filter_properties.fits')
-            props = Table.read(prop_fn)
+            props = get_filter_properties()
             for filt in self.filters:
                 select = props['bandpass'] == filt
                 self.dlam[filt] = props[select]['dlam'][0]

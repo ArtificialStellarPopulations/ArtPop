@@ -1,4 +1,4 @@
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 try:
     __ARTPOP_SETUP__
@@ -16,10 +16,10 @@ if not __ARTPOP_SETUP__:
             os.mkdir(MIST_PATH)
         MIST_PATH = os.path.join(MIST_PATH, 'mist')
         if not os.path.exists(MIST_PATH):
-            print('\033[33mWARNING:\033[0m Environment variable MIST_PATH '
-                  'does not exist. When you first use a MIST grid, it will be '
-                 f'downloaded and saved in {MIST_PATH}. To change this '
-                  'location, create a MIST_PATH environment variable.')
+            print('\033[33mWARNING:\033[0m MIST_PATH environment variable '
+                  'does not exist.\nWhen you first use a MIST grid, it will be '
+                 f'saved in\n{MIST_PATH}. To change this '
+                  'location,\ncreate a MIST_PATH environment variable.')
             os.mkdir(MIST_PATH)
     from .filters import *
     from .stars import *

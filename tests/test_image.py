@@ -6,7 +6,6 @@ from unittest import TestCase
 # Third-party
 import numpy as np
 from astropy import units as u
-from astropy.table import Table
 
 # Project
 import artpop
@@ -57,11 +56,10 @@ class TestImage(TestCase):
 
     def test_art_imager_filters(self):
         """Test that we have all filter info for ArtImager class."""
-        filter_dict = artpop.get_filter_names()
-        fn = os.path.join(artpop.data_dir, 'filter_properties.fits')
-        filt_prop = Table.read(fn)
-        for phot_system, filters in filter_dict.items():
+        filt_prop = artpop.get_filter_properties()
+        for phot_system in artpop.phot_system_list:
             with self.subTest(phot_system):
+                filters = artpop.get_filter_names(phot_system)
                 imager = artpop.ArtImager(phot_system)
                 self.assertEqual(filters, imager.filters)
                 for filt in imager.filters:

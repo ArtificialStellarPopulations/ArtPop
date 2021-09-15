@@ -15,6 +15,7 @@ from . import data_dir
 __all__ = ['phot_system_list',
            'FilterSystem',
            'get_filter_names',
+           'get_filter_properties',
            'phot_system_lookup',
            'load_zero_point_converter']
 
@@ -307,6 +308,19 @@ def get_filter_names(phot_system=None):
             names.extend(mist_filter_names[p])
         mist_filter_names = names
     return mist_filter_names
+
+
+def get_filter_properties():
+    """
+
+    """
+    pkl_fn = os.path.join(data_dir, 'filter_properties.pkl')
+    with open(pkl_fn, 'rb') as pkl_file:
+        data = pickle.load(pkl_file)
+        props = Table(data)
+        props['dlam'] *= u.angstrom
+        props['lam_eff'] *= u.angstrom
+    return props
 
 
 def phot_system_lookup(filter_name=None):
