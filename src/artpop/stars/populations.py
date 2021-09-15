@@ -148,8 +148,8 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Get the magnitude of the integrated component of the population if
         it exists.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         bandpass : str
             Filter of observation. Must be a filter in the given
             photometric system(s).
