@@ -597,7 +597,6 @@ class UniformSSP(Source):
             self.ssp_kw['log_age'] = isochrone.log_age
             self.ssp_kw['feh'] = isochrone.feh
             self.ssp_kw['phot_system'] = isochrone.phot_system
-            self.ssp_kw['version'] = isochrone.version
             self.ssp_kw['v_over_vcrit'] = isochrone.v_over_vcrit
             self.ssp_kw['mist_path'] = isochrone.mist_path
             self.sp = MISTSSP(**self.ssp_kw)
