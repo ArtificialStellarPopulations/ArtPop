@@ -52,7 +52,7 @@ class TestStars(TestCase):
 
     def test_isochrone_calculaions(self):
         """Test isochrone calculations of SSP integrated parameters."""
-        self.assertAlmostEqual(5.6905813, self.iso.ssp_mag('LSST_i'))
+        self.assertAlmostEqual(4.7117543, self.iso.ssp_mag('LSST_i'))
         self.assertAlmostEqual(-1.4292711, self.iso.ssp_sbf_mag('LSST_i'))
         self.assertAlmostEqual(2.2320949,
             self.iso.ssp_color('LSST_u', 'LSST_y'))
