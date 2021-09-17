@@ -294,7 +294,7 @@ class Isochrone(object):
         m_nearest = self.mini[arg_nearest]
         return m_nearest, arg_nearest
 
-    def imf_weights(self, imf, m_min_norm=None, m_max_norm=120,
+    def imf_weights(self, imf, m_min_norm=None, m_max_norm=None,
                     norm_type='mass', **kwargs):
         """
         Calculate IMF weights.
@@ -516,6 +516,9 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
         Structured ``numpy`` array with isochrones and stellar magnitudes.
     """
 
+    # fetch the mist grid if necessary
+    fetch_mist_grid_if_needed(phot_system, v_over_vcrit, mist_path)
+
     v = f'{v_over_vcrit:.1f}'
     ver = 'v1.2'
     p = phot_str_helper[phot_system.lower()]
@@ -570,9 +573,6 @@ class MISTIsochrone(Isochrone):
 
     def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH,
                  v_over_vcrit=0.4):
-
-        # fetch the mist grid if necessary
-        fetch_mist_grid_if_needed(phot_system, v_over_vcrit, mist_path)
 
         # verify age are metallicity are within model grids
         if log_age < self._log_age_min or log_age > self._log_age_max:

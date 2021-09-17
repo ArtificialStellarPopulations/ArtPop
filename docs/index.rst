@@ -26,7 +26,7 @@ Getting Started
 
    getting_started/install
    getting_started/mist
-   getting_started/issues
+   getting_started/contribute
    ArtPop on Github <https://github.com/ArtificialStellarPopulations/ArtPop>
    getting_started/citing
 

@@ -1,4 +1,4 @@
-.. _artpop-issues:
+.. _artpop-contribute:
 
 =================================
 Opening Issues and Contributing 

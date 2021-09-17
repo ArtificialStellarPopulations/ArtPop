@@ -3,13 +3,18 @@
 MIST Isochrone Grids
 ====================
 
-`ArtPop` generates stellar populations by interpolating the `MIST model grids
-<http://waps.cfa.harvard.edu/MIST/model_grids.html#>`_. To simulate photometry
-in a given photometric system, you must first download the `Synthetic
-Photometry <http://waps.cfa.harvard.edu/MIST/model_grids.html#synthetic>`_
-grid for that photometric system. For convenience, you should
-create an environment variable called ``MIST_PATH`` and save all your
-`MIST` grids in this directory.
+`ArtPop` can work with synthetic photometry generated from any source, 
+provided it is in the correct format. For convenience, we provide built-in tools for 
+fetching and manipulating synthetic photometry from the 
+`MIST isochrone models <http://waps.cfa.harvard.edu/MIST/>`_. 
+See, for example, the :class:`~artpop.stars.MISTSSP` and :class:`~artpop.source.MISTSersicSSP`
+classes.
+
+The first time you need a particular MIST grid, it will be downloaded and saved 
+to your ``MIST_PATH``. If this environment variable is not set, 
+the grid(s) will be saved in ``~/.artpop/mist``. 
+
+To change the default path location, create an environment variable called ``MIST_PATH``.
 
 For example, in ``bash``, add this to your
 ``.bashrc`` file::
@@ -17,5 +22,5 @@ For example, in ``bash``, add this to your
     export MIST_PATH='/path/to/your/MIST/grids'
 
 `ArtPop` will use this path by default in all functions that use the
-`MIST` grids. Note, however, that you always have the option to pass a
-different path to these functions.
+MIST grids. Note, however, that you always have the option to pass a
+different path to any function that uses a MIST grid.
