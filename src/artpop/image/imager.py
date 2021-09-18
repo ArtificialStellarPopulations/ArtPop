@@ -40,7 +40,7 @@ class Observation(metaclass=abc.ABCMeta):
         pkl_file.close()
         return data
 
-    def to_fits(self, file_name, overwrite=True, image_type='image'):
+    def to_fits(self, file_name, overwrite=True, image_type='image', **kwargs):
         """
         Write image to fits file.
 
@@ -53,7 +53,10 @@ class Observation(metaclass=abc.ABCMeta):
         image_type : str, optional
             Attribute name of the image to be written.
         """
-        fits.writeto(file_name, getattr(self, image_type), overwrite=overwrite)
+        fits.writeto(file_name,
+                     getattr(self, image_type),
+                     overwrite=overwrite,
+                     **kwargs)
 
     def copy(self):
         """Create deep copy of observation object."""
@@ -61,8 +64,18 @@ class Observation(metaclass=abc.ABCMeta):
 
 
 class IdealObservation(Observation):
-    """Return object for the ideal imager."""
+    """
+    Return object for the ideal imager.
 
+    Parameters
+    ----------
+    image : `~numpy.ndarray`
+        The ideal mock image.
+    bandpass : str
+        Filter of the observation.
+    zpt : float
+        The magnitude zero point.
+    """
     def __init__(self, image, zpt, bandpass):
         self.image = image
         self.zpt = zpt
@@ -70,8 +83,28 @@ class IdealObservation(Observation):
 
 
 class ArtObservation(Observation):
-    """Return object for the artificial imager."""
+    """
+    Return object for the artificial imager.
 
+    Parameters
+    ----------
+    raw_counts : `~numpy.ndarray`
+        Raw count image, including Poisson noise.
+    src_counts : `~numpy.ndarray`
+        Source count image before Poission noise is added.
+    sky_counts : float
+        Counts per pixel from the sky.
+    var_image : `~numpy.ndarray`
+        Variance image.
+    calibration : float
+        Calibration factor that converts counts to calibrated flux units.
+    bandpass : str
+        Filter of the observation.
+    zpt : float
+        The magnitude zero point.
+    exptime : `~astropy.units.Quantity`
+        The exposure time of the mock observation.
+    """
     def __init__(self, raw_counts, src_counts, sky_counts, image,
                  var_image, calibration, zpt, bandpass, exptime, mag_error):
         self.raw_counts = raw_counts
@@ -242,12 +275,8 @@ class IdealImager(Imager):
 
         Returns
         -------
-        image : `~numpy.ndarray`
-            The ideal mock image.
-        bandpass : str
-            Filter of the observation.
-        zpt : float
-            The magnitude zero point.
+        observation : `~artpop.image.IdealObservation`
+            Observation object for the ideal imager.
         """
         self._check_source(source)
         flux = 10**(0.4 * (zpt - source.mags[bandpass]))
@@ -519,10 +548,6 @@ class ArtImager(Imager):
         """
         Make artificial observation.
 
-        .. note::
-            The returned parameters are stored as attributes of a
-            `~collections.namedtuple` object.
-
         Parameters
         ----------
         source : `~artpop.source.Source`
@@ -546,22 +571,8 @@ class ArtImager(Imager):
 
         Returns
         -------
-        raw_counts : `~numpy.ndarray`
-            Raw count image, including Poisson noise.
-        src_counts : `~numpy.ndarray`
-            Source count image before Poission noise is added.
-        sky_counts : float
-            Counts per pixel from the sky.
-        var_image : `~numpy.ndarray`
-            Variance image.
-        calibration : float
-            Calibration factor that converts counts to calibrated flux units.
-        bandpass : str
-            Filter of the observation.
-        zpt : float
-            The magnitude zero point.
-        exptime : `~astropy.units.Quantity`
-            The exposure time of the mock observation.
+        observation : `~artpop.image.ArtObservation`
+            Observation object for the artificial imager.
         """
         self._check_bandpass(bandpass)
         self._check_source(source)

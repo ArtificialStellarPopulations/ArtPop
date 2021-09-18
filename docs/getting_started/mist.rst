@@ -10,8 +10,9 @@ fetching and manipulating synthetic photometry from the
 See, for example, the :class:`~artpop.stars.MISTSSP` and :class:`~artpop.source.MISTSersicSSP`
 classes.
 
-The first time you need a particular MIST grid, it will be downloaded and saved 
-to your ``MIST_PATH``. If this environment variable is not set, 
+The first time you need a particular 
+`MIST synthetic photometry grid <http://waps.cfa.harvard.edu/MIST/model_grids.html>`_, 
+it will be downloaded and saved to your ``MIST_PATH``. If this environment variable is not set, 
 the grid(s) will be saved in ``~/.artpop/mist``. 
 
 To change the default path location, create an environment variable called ``MIST_PATH``.
