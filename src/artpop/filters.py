@@ -353,7 +353,6 @@ def load_zero_point_converter():
     Create and return a `~artpop.filters.ZeroPointConverter` object.
     """
     from astropy.io import ascii
-    from .util import data_dir
     fn = os.path.join(data_dir, 'zeropoints.txt')
     table= ascii.read(fn)
     return ZeroPointConverter(table)
