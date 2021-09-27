@@ -12,6 +12,7 @@ from scipy.special import gammaincinv, gamma
 from . import MIST_PATH
 from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
+from .filters import load_zero_point_converter
 from .util import check_units, check_xy_dim
 
 
@@ -697,6 +698,8 @@ class MISTUniformSSP(UniformSSP):
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
         instance seeded with the `int`.  If `~numpy.random.RandomState`,
         return it. Otherwise raise ``ValueError``.
+    to_ab : bool, optional
+        If True, convert the MIST mean magnitude to AB mags if necessary.
     """
 
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,

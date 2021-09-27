@@ -15,6 +15,7 @@ from .imf import imf_dict, IMFIntegrator
 from .. import MIST_PATH
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
+from ..filters import load_zero_point_converter
 from ..util import check_units, fetch_mist_grid_if_needed
 phot_str_helper = {p.lower():p for p in phot_system_list}
 
@@ -554,6 +555,8 @@ class MISTIsochrone(Isochrone):
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the ``MIST_PATH`` environment variable.
+    ab_or_vega : str, optional
+        Magnitudes will be in the AB (default) or Vega magnitude system.
     v_over_vcrit : float, optional
         Rotation rate divided by the critical surface linear velocity. Current
         options are 0.4 (default) and 0.0.
@@ -565,14 +568,14 @@ class MISTIsochrone(Isochrone):
     _log_age_max = _log_age_grid.max()
 
     # the [Fe/H] metallicity grid
-    # we have feh <= -4, but using <=3 for interpolation boundary
+    # mist has feh <= -4, but using <=-3 due to interpolation issues
     _feh_grid = np.concatenate([np.arange(-3.0, -2., 0.5),
                                 np.arange(-2.0, 0.75, 0.25)])
     _feh_min = _feh_grid.min()
     _feh_max = _feh_grid.max()
 
     def __init__(self, log_age, feh, phot_system, mist_path=MIST_PATH,
-                 v_over_vcrit=0.4):
+                 ab_or_vega='ab', v_over_vcrit=0.4):
 
         # verify age are metallicity are within model grids
         if log_age < self._log_age_min or log_age > self._log_age_max:
@@ -583,6 +586,7 @@ class MISTIsochrone(Isochrone):
         self.feh = feh
         self.mist_path = mist_path
         self.phot_system = phot_system
+        self.ab_or_vega = ab_or_vega
         self.v_over_vcrit = v_over_vcrit
 
         # use nearest age (currently not interpolating on age)
@@ -607,6 +611,17 @@ class MISTIsochrone(Isochrone):
             _iso = self._fetch_iso(p)
             mags = [_iso[f].data for f in filt]
             self._iso_full = append_fields(self._iso_full, filt, mags)
+
+        # covert magnitudes to ab or vega as necessary
+        self.zpt_convert = load_zero_point_converter()
+        for filt in filters:
+            converter = getattr(self.zpt_convert, f'to_{ab_or_vega.lower()}')
+            try:
+                m_convert = converter(filt)
+            except AttributeError:
+                m_convert = 0.0
+                logger.warning(f'No AB / Vega conversion found for {filt}.')
+            self._iso_full[filt] = self._iso_full[filt] + m_convert
 
         super(MISTIsochrone, self).__init__(
             mini = self._iso_full['initial_mass'],

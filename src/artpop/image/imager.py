@@ -325,9 +325,10 @@ class ArtImager(Imager):
         create artificial images. This object calculates `dlam` and `lam_eff`
         for converting magnitudes into counts.
     zpt_inst : dictionary, optional
-        Instrumental zero points. If not None, this alone sets the magnitude
-        associated with 1 count per second. This parameter takes precedence;
-        the diameter and all filter parameters will be ignored.
+        Instrumental zero points. Format should be a dictionary with the filter
+        names as keys and the zero points as values. If not None, this alone
+        sets the magnitude associated with 1 count per second. This parameter
+        takes precedence; parameters such as the diameter will be ignored.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
         If `None`, return the `~numpy.random.RandomState` singleton used by
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
@@ -410,8 +411,8 @@ class ArtImager(Imager):
             The counts associated with each magnitude.
         """
         exptime = check_units(exptime, 's')
-        fnu = fnu_from_AB_mag(mags)
         if self.zpt_inst is None:
+            fnu = fnu_from_AB_mag(mags)
             dlam = self.dlam[bandpass]
             lam_eff = self.lam_eff[bandpass]
             photon_flux = (dlam / lam_eff) * fnu / constants.h.to('erg s')
@@ -421,8 +422,8 @@ class ArtImager(Imager):
             counts *= self.efficiency
             counts = counts.value
         else:
-            photon_flux = fnu * 10**(0.4 * (self.zpt_inst[bandpass] + mAB_0))
-            counts = (photon_flux * exptime.to('s')).value
+            counts = 10**(0.4 * (self.zpt_inst[bandpass] - mags))
+            counts *= exptime.to('s').value
         return counts
 
     def sb_to_counts_per_pixel(self, sb, bandpass, exptime, pixel_scale):
@@ -449,8 +450,8 @@ class ArtImager(Imager):
             Counts per pixel associated with the given surface brightness.
         """
         exptime = check_units(exptime, 's')
-        fnu_per_square_arcsec = fnu_from_AB_mag(sb) / u.arcsec**2
         if self.zpt_inst is None:
+            fnu_per_square_arcsec = fnu_from_AB_mag(sb) / u.arcsec**2
             dlam = self.dlam[bandpass]
             lam_eff = self.lam_eff[bandpass]
             pixel_scale = pixel_scale.to('arcsec / pixel')
@@ -466,9 +467,8 @@ class ArtImager(Imager):
             counts_per_pixel *= self.efficiency
             counts_per_pixel = counts_per_pixel.value
         else:
-            factor = 10**(0.4 * (self.zpt_inst[bandpass] + mAB_0))
-            fnu_per_pixel = (fnu_per_square_arcsec * pixel_scale**2).value
-            counts_per_pixel = fnu_per_pixel * factor * exptime.to('s').value
+            counts_per_pixel = 10**(0.4 * (self.zpt_inst[bandpass] - sb))
+            counts_per_pixel *= exptime.to('s').value
         return counts_per_pixel
 
     def calibration(self, bandpass, exptime, zpt=27.0):
