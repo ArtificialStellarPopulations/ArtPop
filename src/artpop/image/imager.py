@@ -293,9 +293,8 @@ class ArtImager(Imager):
     Imager for making fully artificial images.
 
     .. note::
-        The conversion from magnitude to counts assumes AB magnitudes.
-        If your magnitudes are in another system, you must first convert them
-        into AB magnitudes.
+        If you use a phot_system and its pre-calculated filter properties, the
+        conversion from magnitude to counts assumes AB magnitudes.
 
     Parameters
     ----------

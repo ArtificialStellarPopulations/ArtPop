@@ -698,8 +698,6 @@ class MISTUniformSSP(UniformSSP):
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
         instance seeded with the `int`.  If `~numpy.random.RandomState`,
         return it. Otherwise raise ``ValueError``.
-    to_ab : bool, optional
-        If True, convert the MIST mean magnitude to AB mags if necessary.
     """
 
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,
