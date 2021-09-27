@@ -88,3 +88,14 @@ class TestImage(TestCase):
             self.src, 'LSST_i', exptime=1*u.hr, sky_sb=19)
         self.assertAlmostEqual(
             60.0, obs_long.raw_counts.mean() / obs.raw_counts.mean(), 1)
+
+    def test_art_imager_zpt_inst(self):
+        """Test ArtImager with instrumental zero point."""
+        imager = artpop.ArtImager(zpt_inst=dict(my_i=25))
+        src = artpop.Source(mags=dict(my_i=[25]),
+                            xy=np.array([[100, 100]]),
+                            xy_dim=201,
+                            pixel_scale=0.2)
+        obs = imager.observe(src, 'my_i', exptime=100 * u.s, psf=self.psf)
+        self.assertAlmostEqual(100, obs.src_counts.sum())
+
