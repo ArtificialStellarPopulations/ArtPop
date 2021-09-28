@@ -14,7 +14,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import sys
 try:
-    from sphinx_astropy.conf.v1  import *  
+    from sphinx_astropy.conf.v1  import *
 except ImportError:
     print('ERROR: the documentation requires the sphinx-astropy package to be installed')
     sys.exit(1)
@@ -23,7 +23,7 @@ except ImportError:
 # -- Project information -----------------------------------------------------
 
 project = 'ArtPop'
-copyright = '2020, Johnny Greco and Shany Danieli'
+copyright = '2021, Johnny Greco and Shany Danieli'
 author = 'Johnny Greco and Shany Danieli'
 
 
