@@ -24,7 +24,7 @@ if "publish" in sys.argv[-1]:
 
 # Push a new tag to GitHub.
 if "tag" in sys.argv:
-    os.system("git tag -a {0} -m 'version {0}'".format(version))
+    os.system("git tag -a v{0} -m 'version {0}'".format(version))
     os.system("git push --tags")
     sys.exit()
 
