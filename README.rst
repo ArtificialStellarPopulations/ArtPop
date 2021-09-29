@@ -1,7 +1,7 @@
 ======
 ArtPop
 ======
-|CI|
+|CI| |pypi| |arXiv|
 
 An engine for generating realistic mock images of **Art**\ ificial Stellar **Pop**\ ulations.
 
@@ -24,4 +24,7 @@ License
    :target: https://artpop.readthedocs.io/en/latest/?badge=latest
 .. |License| image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
    :target: https://github.com/ArtificialStellarPopulations/ArtPop/blob/main/LICENSE
-
+.. |pypi| image:: https://badge.fury.io/py/artpop.svg
+   :target: https://badge.fury.io/py/artpop
+.. |arXiv| image:: https://img.shields.io/badge/arXiv-xxxx.xxxx-blue
+   :target: https://arxiv.org/abs/
