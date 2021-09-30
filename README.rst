@@ -26,5 +26,5 @@ License
    :target: https://github.com/ArtificialStellarPopulations/ArtPop/blob/main/LICENSE
 .. |pypi| image:: https://badge.fury.io/py/artpop.svg
    :target: https://badge.fury.io/py/artpop
-.. |arXiv| image:: https://img.shields.io/badge/arXiv-xxxx.xxxx-blue
-   :target: https://arxiv.org/abs/
+.. |arXiv| image:: https://img.shields.io/badge/arXiv-2109.13943-blue
+   :target: https://arxiv.org/abs/2109.13943
