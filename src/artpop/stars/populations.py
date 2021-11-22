@@ -428,7 +428,6 @@ class SSP(StellarPopulation):
             mean_mass = imfint.m_integrate(m_min, m_max)
             mean_mass /= imfint.integrate(m_min, m_max)
             num_stars_iter = int(mass_tolerance * sampled_mass / mean_mass)
-            print(sampled_mass,num_stars_iter)
             self.initial_masses = build_galaxy(
                 sampled_mass, m_min=m_min, m_max=m_max, imf=self.imf,
                 random_state=self.rng, num_stars_iter=num_stars_iter, **imf_kw)

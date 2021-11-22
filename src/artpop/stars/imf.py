@@ -28,12 +28,59 @@ imf_prop_dict = {'salpeter':salpeter_prop,'kroupa':kroupa_prop,'scalo':scalo_pro
 #Simple wrapper functions to re-create old functions
 
 def kroupa(m,**kw):
+    """
+    Wrapper function to calculate weights for the Kroupa stellar initial
+    mass function
+    (`Kroupa 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
+    Parameters
+    ----------
+    mass_grid : `~numpy.ndarray`
+        Stellar mass grid.
+    norm_type : str, optional
+        How to normalize the weights: by 'number', 'mass', or the 'sum'.
+    num_norm_bins : int, optional
+        Number of mass bins to use for integration (if needed to normalize).
+    norm_mass_min : int or None, optional
+        Minimum mass to use for normalization. If None, use minimum of
+        `mass_grid` will be used.
+    norm_mass_max : int or None, optional
+        Maximum mass to use for normalization. If None, use maximum of
+        `mass_grid` will be used.
+    Returns
+    -------
+    weights : `~numpy.ndarray`
+        The weights associated with each mass in the input `mass_grid`.
+    """
     return IMFIntegrator('kroupa').weights(m, **kw)
 
 def scalo(m,**kw):
+    """
+    The Scalo stellar initial mass function (`Scalo 1998
+    <https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
+    """
     return IMFIntegrator('scalo').weights(m, **kw)
 
 def salpeter(m,**kw):
+    """
+    Wrapper function to calculate weights for the Salpeter IMF (`Salpeter 1955
+    <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
+    Parameters
+    ----------
+    mass_grid : `~numpy.ndarray`
+        Stellar mass grid.
+    norm_type : str, optional
+        How to normalize the weights: by 'number', 'mass', or the 'sum'.
+    norm_mass_min : int or None, optional
+        Minimum mass to use for normalization. If None, use minimum of
+        `mass_grid` will be used.
+    norm_mass_max : int or None, optional
+        Maximum mass to use for normalization. If None, use maximum of
+        `mass_grid` will be used.
+    Returns
+    -------
+    weights : `~numpy.ndarray`
+        The weights associated with each mass in the input `mass_grid`.
+    """
     return IMFIntegrator('salpeter').weights(m, **kw)
 
 def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
@@ -115,6 +162,21 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
 class IMFIntegrator(object):
     """
     A helper class for numerically integrating the IMF.
+
+    Parameters
+    ----------
+    prop : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. If dict must contain 'a' with 3 elements describing
+        the slopes of the broken power law and 'b' with two elements describing
+        the locations of the breaks.
+    m_min : float, optional
+        Minimum stellar mass.
+    m_max : float, optional
+        Maximum stellar mass.
+    eval_min : float, optional
+        Technical detail describing where to evaluate the indefinite integral,
+        should not need to change this.
     """
 
     def __init__(self, prop, m_min=0.1, m_max=120.0,eval_min = 1e-5):
