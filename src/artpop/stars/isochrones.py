@@ -11,7 +11,7 @@ from astropy import units as u
 
 # Project
 from ._read_mist_models import IsoCmdReader, IsoReader
-from .imf import imf_dict, IMFIntegrator
+from .imf import IMFIntegrator
 from .. import MIST_PATH
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
@@ -302,8 +302,8 @@ class Isochrone(object):
 
         Parameters
         ----------
-        imf : str or callable function that takes mass as its argument
-            Stellar Initial mass function.
+        imf : str or dict
+            Stellar Initial mass function, see imf.py for details
         m_min_norm : None or float, optional
             Minimum mass for the normalization. Must be less than or equal to
             the mini mass of isochrone, which will be used if None is given.
@@ -322,14 +322,19 @@ class Isochrone(object):
         m_max = m_max_norm if m_max_norm else self.mini.max()
         if m_min > self.m_min:
             raise Exception('Minimum mass must be <= isochrone min mass.')
-        if callable(imf):
-            imf_func = imf
-        else:
-            imf_func = lambda m: imf_dict[imf](m, norm_type=None)
-        m_imf_func = lambda m: m * imf_func(m)
-        norm_func = dict(mass=m_imf_func, number=imf_func)[norm_type]
-        norm = quad(norm_func, m_min, m_max, **kwargs)[0]
+        #if callable(imf):
+        #    imf_func = imf
+        #else:
+        #    imf_func = lambda m: imf_dict[imf](m, norm_type=None)
+        #m_imf_func = lambda m: m * imf_func(m)
+        #norm_func = dict(mass=m_imf_func, number=imf_func)[norm_type]
+        #norm = quad(norm_func, m_min, m_max, **kwargs)[0]
 
+        mfint = IMFIntegrator(imf)
+        if norm_type == 'mass':
+            norm = mfint.m_integrate(m_min = m_min,m_max = m_max)
+        elif norm_type == 'number':
+            norm = mfint.integrate(m_min = m_min,m_max = m_max)
         wght = []
         mini = self.mini
         # Assume mass is constant in each bin and integrate.
@@ -346,7 +351,8 @@ class Isochrone(object):
                 m2 = mini[i] + 0.5 * (mini[i+1] - mini[i])
             if m2 < m1:
                 raise Exception('Masses must be monotonically increasing.')
-            wght.append(quad(imf_func, m1, m2, **kwargs)[0])
+            #wght.append(quad(imf_func, m1, m2, **kwargs)[0])
+            wght.append(mfint.integrate(m_min = m1, m_max = m2))
         wght = np.array(wght) / norm
         return wght
 
@@ -469,24 +475,22 @@ class Isochrone(object):
         mass = np.sum(self.mact * wght)
 
         if add_remnants:
-            imf_func = lambda m: imf_dict[imf](m, norm_type=None)
-            m_imf_func = lambda m: m * imf_func(m)
-            norm = quad(m_imf_func, m_min, m_max)[0]
-
+            mfint = IMFIntegrator(imf)
+            norm = mfint.m_integrate(m_min = m_min, m_max = m_max)
             # BH remnants
             m_low = max(mlim_bh, self.m_max)
-            mass = mass + 0.5 * quad(m_imf_func, m_low, m_max)[0] / norm
+            mass = mass + 0.5 * mfint.m_integrate(m_min=m_low, m_max=m_max) / norm
 
             # NS remnants
             if self.m_max <= mlim_bh:
                 m_low = max(mlim_ns, self.m_max)
-                mass = mass + 1.4 * quad(imf_func, m_low, mlim_bh)[0] / norm
+                mass = mass + 1.4 * mfint.integrate(m_min = m_low, m_max = mlim_bh) / norm
 
             # WD remnants
             if self.m_max < mlim_ns:
                 mmax = self.m_max
-                mass = mass + 0.48 * quad(imf_func, mmax, mlim_ns)[0] / norm
-                mass = mass + 0.077 * quad(m_imf_func, mmax, mlim_ns)[0] / norm
+                mass = mass + 0.48 * mfint.integrate(m_min = mmax, m_max = mlim_ns) / norm
+                mass = mass + 0.077 * mfint.m_integrate(m_min = mmax, m_max = mlim_ns) / norm
 
         return mass
 
