@@ -26,7 +26,7 @@ Installing the Development Version
 ==================================
 
 If you're feeling adventurous, you can download the development 
-version of `ArtPop` from `GitHub <https://github.com/>`_ using ``git``::
+version of `ArtPop` from `GitHub <https://github.com/ArtificialStellarPopulations/ArtPop>`_ using ``git``::
     
     git clone git://github.com/ArtificialStellarPopulations/ArtPop.git
 
