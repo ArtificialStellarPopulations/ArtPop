@@ -90,6 +90,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
+.vscode
 .*.swp
 .dropbox.attr
 .DS_Store

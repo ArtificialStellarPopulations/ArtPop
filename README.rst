@@ -1,6 +1,8 @@
 ======
 ArtPop
 ======
+.. image:: ./docs/artpop_diagram.jpg
+
 |CI| |pypi| |arXiv|
 
 An engine for generating realistic mock images of **Art**\ ificial Stellar **Pop**\ ulations.
