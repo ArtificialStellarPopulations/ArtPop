@@ -13,21 +13,20 @@ __all__ = ['IMFIntegrator', 'salpeter_prop', 'kroupa_prop', 'scalo_prop',
             'kroupa','scalo','salpeter']
 
 
-#Define commonly used IMFs
+# define commonly used IMFs
 
-#Can set up similar dict for custom option but need to use 3 segment
-#broken power or hack it (see salpeter below)
+# pre-defined IMF parameter dictionaries
 kroupa_prop = {'a':[-0.3,-1.3,-2.3],'b':[0.08,0.5]}
 scalo_prop = {'a':[-1.2,-2.7,-2.3],'b':[1,10]}
 
 #Simple 'hack' to allow for a single power law
 salpeter_prop = {'a':[-2.35]*3,'b':[2e2,3e2]}
 
-imf_prop_dict = {'salpeter':salpeter_prop,'kroupa':kroupa_prop,'scalo':scalo_prop}
+imf_prop_dict = {'salpeter': salpeter_prop, 'kroupa': kroupa_prop, 'scalo': scalo_prop}
 
 #Simple wrapper functions to re-create old functions
 
-def kroupa(m,**kw):
+def kroupa(m, **kwargs):
     """
     Wrapper function to calculate weights for the Kroupa stellar initial
     mass function
@@ -51,16 +50,16 @@ def kroupa(m,**kw):
     weights : `~numpy.ndarray`
         The weights associated with each mass in the input `mass_grid`.
     """
-    return IMFIntegrator('kroupa').weights(m, **kw)
+    return IMFIntegrator('kroupa').weights(m, **kwargs)
 
-def scalo(m,**kw):
+def scalo(m, **kwargs):
     """
     The Scalo stellar initial mass function (`Scalo 1998
     <https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
     """
-    return IMFIntegrator('scalo').weights(m, **kw)
+    return IMFIntegrator('scalo').weights(m, **kwargs)
 
-def salpeter(m,**kw):
+def salpeter(m, **kwargs):
     """
     Wrapper function to calculate weights for the Salpeter IMF (`Salpeter 1955
     <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
@@ -81,7 +80,7 @@ def salpeter(m,**kw):
     weights : `~numpy.ndarray`
         The weights associated with each mass in the input `mass_grid`.
     """
-    return IMFIntegrator('salpeter').weights(m, **kw)
+    return IMFIntegrator('salpeter').weights(m, **kwargs)
 
 def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
                num_mass_bins=100000, random_state=None, imf_kw={}):
@@ -269,15 +268,15 @@ class IMFIntegrator(object):
 
     def _indef_m_int(self,m):
 
-        a0,a1,a2 = self.a
-        b0,b1 = self.b
+        a0, a1, a2 = self.a
+        b0, b1 = self.b
 
-        #Define constants to normalize functions
+        # define constants to normalize functions
         c0 = b0**a0
         c1 = b0**a1
-        c2 = (b1 * (b0 / b1)**(a1 / a2) )**a2
+        c2 = (b1 * (b0 / b1)**(a1 / a2))**a2
 
-        #Multiply by M
+        # multiply by M
         a0 += 1
         a1 += 1
         a2 += 1
@@ -303,4 +302,4 @@ class IMFIntegrator(object):
             n = norm
         else:
             raise Exception(f'{norm} is not a valid normalization.')
-        return ( self._indef_m_int(m_max) - self._indef_m_int(m_min) ) / n
+        return (self._indef_m_int(m_max) - self._indef_m_int(m_min)) / n
