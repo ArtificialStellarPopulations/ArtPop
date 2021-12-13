@@ -3,26 +3,27 @@ import numpy as np
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from astropy import units as u
+from typing import Iterable
 
 # Project
 from ..util import check_random_state, check_units
 
 
-__all__ = ['IMFIntegrator', 'salpeter_prop', 'kroupa_prop', 'scalo_prop',
-            'imf_prop_dict', 'sample_imf', 'build_galaxy',
+__all__ = ['IMFIntegrator', 'salpeter_params', 'kroupa_params', 'scalo_params',
+            'imf_params_dict', 'sample_imf', 'build_galaxy',
             'kroupa','scalo','salpeter']
 
 
 # define commonly used IMFs
 
 # pre-defined IMF parameter dictionaries
-kroupa_prop = {'a':[-0.3,-1.3,-2.3],'b':[0.08,0.5]}
-scalo_prop = {'a':[-1.2,-2.7,-2.3],'b':[1,10]}
+kroupa_params = {'a':[-0.3,-1.3,-2.3],'b':[0.08,0.5]}
+scalo_params = {'a':[-1.2,-2.7,-2.3],'b':[1,10]}
 
 #Simple 'hack' to allow for a single power law
-salpeter_prop = {'a':[-2.35]*3,'b':[2e2,3e2]}
+salpeter_params = {'a':-2.35,'b':[2e2,3e2]}
 
-imf_prop_dict = {'salpeter': salpeter_prop, 'kroupa': kroupa_prop, 'scalo': scalo_prop}
+imf_params_dict = {'salpeter': salpeter_params, 'kroupa': kroupa_params, 'scalo': scalo_params}
 
 #Simple wrapper functions to re-create old functions
 
@@ -31,6 +32,7 @@ def kroupa(m, **kwargs):
     Wrapper function to calculate weights for the Kroupa stellar initial
     mass function
     (`Kroupa 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
+
     Parameters
     ----------
     mass_grid : `~numpy.ndarray`
@@ -45,6 +47,7 @@ def kroupa(m, **kwargs):
     norm_mass_max : int or None, optional
         Maximum mass to use for normalization. If None, use maximum of
         `mass_grid` will be used.
+
     Returns
     -------
     weights : `~numpy.ndarray`
@@ -56,13 +59,7 @@ def scalo(m, **kwargs):
     """
     The Scalo stellar initial mass function (`Scalo 1998
     <https://ui.adsabs.harvard.edu/abs/1998ASPC..142..201S/abstract>`_).
-    """
-    return IMFIntegrator('scalo').weights(m, **kwargs)
 
-def salpeter(m, **kwargs):
-    """
-    Wrapper function to calculate weights for the Salpeter IMF (`Salpeter 1955
-    <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
     Parameters
     ----------
     mass_grid : `~numpy.ndarray`
@@ -75,6 +72,32 @@ def salpeter(m, **kwargs):
     norm_mass_max : int or None, optional
         Maximum mass to use for normalization. If None, use maximum of
         `mass_grid` will be used.
+
+    Returns
+    -------
+    weights : `~numpy.ndarray`
+        The weights associated with each mass in the input `mass_grid`.
+    """
+    return IMFIntegrator('scalo').weights(m, **kwargs)
+
+def salpeter(m, **kwargs):
+    """
+    Wrapper function to calculate weights for the Salpeter IMF (`Salpeter 1955
+    <https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S/abstract>`_).
+
+    Parameters
+    ----------
+    mass_grid : `~numpy.ndarray`
+        Stellar mass grid.
+    norm_type : str, optional
+        How to normalize the weights: by 'number', 'mass', or the 'sum'.
+    norm_mass_min : int or None, optional
+        Minimum mass to use for normalization. If None, use minimum of
+        `mass_grid` will be used.
+    norm_mass_max : int or None, optional
+        Maximum mass to use for normalization. If None, use maximum of
+        `mass_grid` will be used.
+
     Returns
     -------
     weights : `~numpy.ndarray`
@@ -95,8 +118,13 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
         Minimum stellar mass.
     m_max : float, optional
         Maximum stellar mass.
-    imf : str, optional
-        The desired IMF (salpeter or kroupa)
+    imf : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
     num_mass_bins : int, optional
         Number of mass bins in logarithmic spaced mass grid.
     random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
@@ -164,47 +192,75 @@ class IMFIntegrator(object):
 
     Parameters
     ----------
-    prop : str or dict
+    params : str or dict
         Which IMF to use, if str then must be one of pre-defined: 'kroupa',
-        'scalo' or 'salpeter'. If dict must contain 'a' with 3 elements describing
-        the slopes of the broken power law and 'b' with two elements describing
-        the locations of the breaks.
+        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
     m_min : float, optional
         Minimum stellar mass.
     m_max : float, optional
         Maximum stellar mass.
-    eval_min : float, optional
-        Technical detail describing where to evaluate the indefinite integral,
-        should not need to change this.
     """
 
-    def __init__(self, prop, m_min=0.1, m_max=120.0,eval_min = 1e-5):
+    def __init__(self, params, m_min=0.1, m_max=120.0):
 
-        if type(prop) == str:
-            if prop in imf_prop_dict.keys():
-                prop_dict = imf_prop_dict[prop]
-                self.a = prop_dict['a']
-                self.b = prop_dict['b']
-                self.name = prop
+        if type(params) == str:
+            if params in imf_params_dict.keys():
+                params_dict = imf_params_dict[params]
+                if params == 'salpeter':
+                    self.a = [ params_dict['a'] ]*3
+                    self.b = [301.,302.]
+                else:
+                    self.a = params_dict['a']
+                    self.b = params_dict['b']
+                self.name = params
             else:
-                raise Exception(f'{prop} is not one of the pre-defined IMFs: ' \
-                 + ', '.join(imf_prop_dict.keys()) )
+                raise Exception(f'{params} is not one of the pre-defined IMFs: ' \
+                 + ', '.join(imf_params_dict.keys()) )
 
-        elif type(prop) == dict:
-            if 'a' in prop.keys() and 'b' in prop.keys():
-                self.a = prop['a']
-                self.b = prop['b']
+        elif type(params) == dict:
+            if 'a' in params.keys() and 'b' in params.keys() and isinstance(params['a'],Iterable):
+                self.a = params['a']
+                self.b = params['b']
+                self.name = 'custom'
+            elif 'a' in params.keys() and isinstance(params['a'],float):
+                self.a = [ params['a'] ]*3
+                self.b = [301.,302.]
                 self.name = 'custom'
             else:
-                raise ValueError("dict must have both 'a' and 'b' for alphas and breaks")
+                raise Exception("dict must have both 'a' and 'b' for broken power law or float in 'a' for single power law")
         self.m_min = m_min
         self.m_max = m_max
-        self.eval_min = eval_min
+        self.eval_min = 1e-3
         self.num_norm = self.integrate(m_min, m_max, None)
         self.mass_norm = self.m_integrate(m_min, m_max, None)
 
     def weights(self, mass_grid, norm_type=None,
         norm_mass_min=None, norm_mass_max=None):
+        """
+        Calculate the weights of the IMF at grid of stellar masses.
+
+        Parameters
+        ----------
+        mass_grid : `~numpy.ndarray`
+            Stellar mass grid.
+        norm_type : str, optional
+            How to normalize the weights: by 'number', 'mass', or the 'sum'.
+        norm_mass_min : int or None, optional
+            Minimum mass to use for normalization. If None, use minimum of
+            `mass_grid` will be used.
+        norm_mass_max : int or None, optional
+            Maximum mass to use for normalization. If None, use maximum of
+            `mass_grid` will be used.
+
+        Returns
+        -------
+        weights : `~numpy.ndarray`
+            The weights associated with each mass in the input `mass_grid`.
+        """
 
         mass_grid = np.asarray(mass_grid)
         a1, a2, a3 = self.a
@@ -228,12 +284,45 @@ class IMFIntegrator(object):
         return weights
 
     def func(self,m):
+        """
+        Wrapper function to calculate the un-normalized values of
+        of the IMF (i.e. dN / dM ) at grid of stellar masses.
+
+        Parameters
+        ----------
+        mass_grid : `~numpy.ndarray`
+            Stellar mass grid.
+
+        Returns
+        -------
+        weights : `~numpy.ndarray`
+            The values of dN/dM associated with each mass in the input `mass_grid`.
+        """
+
         return self.weights(m, norm_type = None)
 
     def m_func(self, m):
+        """
+        Wrapper function to calculate the un-normalized values of
+        the mass times the IMF (i.e. dN / d logM ) at grid of stellar masses.
+
+        Parameters
+        ----------
+        mass_grid : `~numpy.ndarray`
+            Stellar mass grid.
+
+        Returns
+        -------
+        weights : `~numpy.ndarray`
+            The values dN/d logM associated with each mass in the input `mass_grid`.
+        """
+
         return m * self.weights(m, norm_type=None)
 
     def _indef_int(self,m):
+        """
+        Helper function to calculate integral for `0` to some mass
+        """
 
         a0,a1,a2 = self.a
         b0,b1 = self.b
@@ -243,17 +332,39 @@ class IMFIntegrator(object):
         c1 = b0**a1
         c2 = (b1 * (b0 / b1)**(a1 / a2) )**a2
 
+        ans = 0
         if m > b1:
-            return (b0**(a0+1.) - self.eval_min**(a0+1.)) / (a0+1)/c0  \
+            ans = (b0**(a0+1.) - self.eval_min**(a0+1.)) / (a0+1)/c0  \
              + (b1**(a1+1.) - b0**(a1+1.))/(a1+1)/c1  \
              + (m**(a2+1.) - b1**(a2+1.))/(a2+1)/c2
         elif m > b0:
-            return (b0**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0 \
+            ans = (b0**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0 \
              + (m**(a1+1.)- b0**(a1+1.))/(a1+1) /c1
         else:
-            return (m**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0
+            ans = (m**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0
+        return ans
 
-    def integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
+    def integrate(self, m_min=None, m_max=None, norm=False, ):
+        """"
+        Function to calculate the integral under the IMF.
+
+        Parameters
+        ----------
+        m_min : Float
+            Lower stellar mass bound of integral.
+        m_max : Float
+            Upper stellar mass bound of integral.
+        norm: : Bool or Float
+            Whether or not to normalize the inegral, default False. If True
+            will normalize by number of stars. If a Float is given, then will use
+            that value as the normalization.
+
+        Returns
+        -------
+        weights : Float
+            Value of the integral of the IMF between m_min and m_mass.
+        """
+
         m_min = m_min if m_min else self.m_min
         m_max = m_max if m_max else self.m_max
         if norm == True:
@@ -267,6 +378,9 @@ class IMFIntegrator(object):
         return ( self._indef_int(m_max) - self._indef_int(m_min) ) / n
 
     def _indef_m_int(self,m):
+        """
+        Helper function to calculate integral for `0` to some mass
+        """
 
         a0, a1, a2 = self.a
         b0, b1 = self.b
@@ -281,17 +395,40 @@ class IMFIntegrator(object):
         a1 += 1
         a2 += 1
 
+        ans = 0
+
         if m > b1:
-            return (b0**(a0+1.) - self.eval_min**(a0+1.)) / (a0+1)/c0 \
+            ans = (b0**(a0+1.) - self.eval_min**(a0+1.)) / (a0+1)/c0 \
              + (b1**(a1+1.) - b0**(a1+1.))/(a1+1)/c1 \
              + (m**(a2+1.) - b1**(a2+1.))/(a2+1)/c2
         elif m > b0:
-            return (b0**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0 \
+            ans = (b0**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0 \
              + (m**(a1+1.) - b0**(a1+1.))/(a1+1) /c1
         else:
-            return (m**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0
+            ans = (m**(a0+1.) - self.eval_min**(a0+1.))/(a0+1)/c0
 
-    def m_integrate(self, m_min=None, m_max=None, norm=False, **kwargs):
+        return ans
+
+    def m_integrate(self, m_min=None, m_max=None, norm=False):
+        """"
+        Function to calculate the integral under mass times the IMF.
+
+        Parameters
+        ----------
+        m_min : Float
+            Lower stellar mass bound of integral.
+        m_max : Float
+            Upper stellar mass bound of integral.
+        norm: : Bool or Float
+            Whether or not to normalize the integral, default False. If True
+            will normalize by the total stelllar mass. If a Float is given,
+            then will use that value as the normalization.
+
+        Returns
+        -------
+        weights : Float
+            Value of the integral of mass times the IMF between m_min and m_mass.
+        """
         m_min = m_min if m_min else self.m_min
         m_max = m_max if m_max else self.m_max
         if norm == True:
