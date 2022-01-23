@@ -14,24 +14,21 @@ __all__ = ['IMFIntegrator', 'salpeter_params', 'kroupa_params', 'scalo_params',
             'kroupa','scalo','salpeter']
 
 
-# define commonly used IMFs
-
 # pre-defined IMF parameter dictionaries
-kroupa_params = {'a':[-0.3,-1.3,-2.3],'b':[0.08,0.5]}
-scalo_params = {'a':[-1.2,-2.7,-2.3],'b':[1,10]}
+kroupa_params = {'a': [-0.3, -1.3, -2.3],'b': [0.08, 0.5]}
+scalo_params = {'a': [-1.2, -2.7, -2.3], 'b': [1,10]}
+salpeter_params = {'a': -2.35, 'b': [2e2, 3e2]}
+imf_params_dict = {'salpeter': salpeter_params,
+                   'kroupa': kroupa_params,
+                   'scalo': scalo_params}
 
-#Simple 'hack' to allow for a single power law
-salpeter_params = {'a':-2.35,'b':[2e2,3e2]}
-
-imf_params_dict = {'salpeter': salpeter_params, 'kroupa': kroupa_params, 'scalo': scalo_params}
-
-#Simple wrapper functions to re-create old functions
 
 def kroupa(m, **kwargs):
     """
     Wrapper function to calculate weights for the Kroupa stellar initial
     mass function
-    (`Kroupa 2001 <https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
+    (`Kroupa 2001
+    <https://ui.adsabs.harvard.edu/abs/2001MNRAS.322..231K/abstract>`_).
 
     Parameters
     ----------
@@ -54,6 +51,7 @@ def kroupa(m, **kwargs):
         The weights associated with each mass in the input `mass_grid`.
     """
     return IMFIntegrator('kroupa').weights(m, **kwargs)
+
 
 def scalo(m, **kwargs):
     """
@@ -80,6 +78,7 @@ def scalo(m, **kwargs):
     """
     return IMFIntegrator('scalo').weights(m, **kwargs)
 
+
 def salpeter(m, **kwargs):
     """
     Wrapper function to calculate weights for the Salpeter IMF (`Salpeter 1955
@@ -105,6 +104,7 @@ def salpeter(m, **kwargs):
     """
     return IMFIntegrator('salpeter').weights(m, **kwargs)
 
+
 def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
                num_mass_bins=100000, random_state=None, imf_kw={}):
     """
@@ -120,7 +120,7 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
         Maximum stellar mass.
     imf : str or dict
         Which IMF to use, if str then must be one of pre-defined: 'kroupa',
-        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        'scalo' or 'salpeter'. Can also specify broken power law as dict,
         which must contain either 'a' as a Float (describing the slope of a
         single power law) or 'a' (a list with 3 elements describing the slopes
         of a broken power law) and 'b' (a list  with 2 elements describing the
@@ -194,7 +194,7 @@ class IMFIntegrator(object):
     ----------
     params : str or dict
         Which IMF to use, if str then must be one of pre-defined: 'kroupa',
-        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        'scalo' or 'salpeter'. Can also specify broken power law as dict,
         which must contain either 'a' as a Float (describing the slope of a
         single power law) or 'a' (a list with 3 elements describing the slopes
         of a broken power law) and 'b' (a list  with 2 elements describing the
@@ -218,20 +218,28 @@ class IMFIntegrator(object):
                     self.b = params_dict['b']
                 self.name = params
             else:
-                raise Exception(f'{params} is not one of the pre-defined IMFs: ' \
-                 + ', '.join(imf_params_dict.keys()) )
+                raise Exception(
+                        f'{params} is not one of the pre-defined IMFs: ' \
+                        + ', '.join(imf_params_dict.keys())
+                    )
 
         elif type(params) == dict:
-            if 'a' in params.keys() and 'b' in params.keys() and isinstance(params['a'],Iterable):
+            if ('a' in params.keys() and
+                'b' in params.keys() and
+                isinstance(params['a'], Iterable)):
                 self.a = params['a']
                 self.b = params['b']
                 self.name = 'custom'
-            elif 'a' in params.keys() and isinstance(params['a'],float):
+            elif 'a' in params.keys() and isinstance(params['a'], float):
                 self.a = [ params['a'] ]*3
                 self.b = [301.,302.]
                 self.name = 'custom'
             else:
-                raise Exception("dict must have both 'a' and 'b' for broken power law or float in 'a' for single power law")
+                raise Exception(
+                        "dict must have both 'a' and 'b' for broken power "
+                        "law or float in 'a' for single power law"
+                    )
+
         self.m_min = m_min
         self.m_max = m_max
         self.eval_min = 1e-3
@@ -296,7 +304,7 @@ class IMFIntegrator(object):
         Returns
         -------
         weights : `~numpy.ndarray`
-            The values of dN/dM associated with each mass in the input `mass_grid`.
+            Values of dN/dM associated with each mass in the input `mass_grid`.
         """
 
         return self.weights(m, norm_type = None)
@@ -314,7 +322,7 @@ class IMFIntegrator(object):
         Returns
         -------
         weights : `~numpy.ndarray`
-            The values dN/d logM associated with each mass in the input `mass_grid`.
+            Values dN/d logM associated with each mass in `mass_grid`.
         """
 
         return m * self.weights(m, norm_type=None)
@@ -356,8 +364,8 @@ class IMFIntegrator(object):
             Upper stellar mass bound of integral.
         norm: : Bool or Float
             Whether or not to normalize the inegral, default False. If True
-            will normalize by number of stars. If a Float is given, then will use
-            that value as the normalization.
+            will normalize by number of stars. If a Float is given, then
+            will use that value as the normalization.
 
         Returns
         -------
@@ -427,7 +435,8 @@ class IMFIntegrator(object):
         Returns
         -------
         weights : Float
-            Value of the integral of mass times the IMF between m_min and m_mass.
+            Value of the integral of mass times the IMF between
+            m_min and m_mass.
         """
         m_min = m_min if m_min else self.m_min
         m_max = m_max if m_max else self.m_max
@@ -440,3 +449,4 @@ class IMFIntegrator(object):
         else:
             raise Exception(f'{norm} is not a valid normalization.')
         return (self._indef_m_int(m_max) - self._indef_m_int(m_min)) / n
+
