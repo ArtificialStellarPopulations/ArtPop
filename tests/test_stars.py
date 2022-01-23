@@ -35,11 +35,11 @@ class TestStars(TestCase):
         self.assertAlmostEqual(0.5756151, masses.mean())
 
         masses = imf.sample_imf(1e5, imf='salpeter', random_state=9)
-        self.assertAlmostEqual(28755.5160240, masses.sum())
+        self.assertAlmostEqual(28755.5160240, masses.sum(),3)
         self.assertAlmostEqual(0.2875552, masses.mean())
 
         masses = imf.sample_imf(1e5, imf='scalo', random_state=8)
-        self.assertAlmostEqual(65983.6712102, masses.sum())
+        self.assertAlmostEqual(65983.6712102, masses.sum(),3)
         self.assertAlmostEqual(0.6598367, masses.mean())
 
         self.assertLessEqual(0.9, 1e4 / imf.build_galaxy(1e4, 1e3).sum())
@@ -64,12 +64,11 @@ class TestStars(TestCase):
     def test_ssp(self):
         """Test SSP objects."""
         ssp = SSP(self.iso, num_stars=1e5, random_state=1)
-        self.assertAlmostEqual(42503.7698205, ssp.total_mass.value)
+        self.assertAlmostEqual(42503.7698205, ssp.total_mass.value,3)
         self.assertAlmostEqual(
-            30038.3808821, ssp.total_initial_live_mass.value)
+            30038.3808821, ssp.total_initial_live_mass.value,3)
         ssp_2 = SSP(self.iso, num_stars=1e5, random_state=11)
         csp = ssp + ssp_2
         self.assertEqual(200000, csp.num_stars)
         self.assertEqual(ssp.total_mass + ssp_2.total_mass, csp.total_mass)
         self.assertAlmostEqual(5.9007906, csp.mean_mag('LSST_z'))
-

@@ -15,7 +15,7 @@ from .. import MIST_PATH
 from ..util import check_random_state, check_units
 from ..log import logger
 from ..filters import *
-from .imf import sample_imf, build_galaxy, imf_dict, IMFIntegrator
+from .imf import sample_imf, build_galaxy, IMFIntegrator
 from .isochrones import MISTIsochrone
 
 
@@ -32,8 +32,13 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`
         (i.e., the mags are in absolute units).
-    imf : str, optional
-        The initial stellar mass function. Default is `'kroupa'`.
+    imf : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
     """
 
     def __init__(self, distance=10.0 * u.pc, imf='kroupa', imf_kw={}):
@@ -315,8 +320,13 @@ class SSP(StellarPopulation):
     mag_limit_band : str, optional
         Bandpass of the limiting magnitude. You must give this parameter if
         you use the `mag_limit` parameter.
-    imf : str, optional
-        The initial stellar mass function. Default is `'kroupa'`.
+    imf : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
     imf_kw : dict, optional
         Optional keyword arguments for sampling the stellar mass function.
     mass_tolerance : float, optional
@@ -673,8 +683,13 @@ class MISTSSP(SSP):
     mag_limit_band : str, optional
         Bandpass of the limiting magnitude. You must give this parameter if
         you use the `mag_limit` parameter.
-    imf : str, optional
-        The initial stellar mass function. Default is `'kroupa'`.
+    imf : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
