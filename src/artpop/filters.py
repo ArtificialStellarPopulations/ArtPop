@@ -23,7 +23,7 @@ __all__ = ['phot_system_list',
 # list of photometric systems with pre-calculated filter properties
 phot_system_list = [
     'HST_WFC3', 'HST_ACSWF', 'SDSSugriz', 'CFHTugriz', 'DECam', 'HSC',
-    'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST'
+    'JWST', 'LSST', 'UBVRIplus', 'UKIDSS', 'WFIRST', 'GALEX'
 ]
 
 
@@ -52,7 +52,6 @@ class FilterSystem(object):
             data = np.loadtxt(fn, **kwargs)
             table = Table(data=data, names=['wave', 'trans'])
             setattr(self, name, table)
-            self.filter_names.append(name)
 
     def _get_trans(self, bandpass):
         """
@@ -311,9 +310,7 @@ def get_filter_names(phot_system=None):
 
 
 def get_filter_properties():
-    """
-
-    """
+    """Return astropy Table with the filter lam_eff and dlam values."""
     pkl_fn = os.path.join(data_dir, 'filter_properties.pkl')
     with open(pkl_fn, 'rb') as pkl_file:
         data = pickle.load(pkl_file)
