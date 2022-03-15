@@ -155,7 +155,8 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
     return masses
 
 
-def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
+def build_galaxy(stellar_mass, num_stars_iter=1e5, m_min=0.08, m_max=120, imf='kroupa',
+    num_mass_bins=100000, random_state=None, imf_kw={}):
     """
     Build galaxy of a given stellar mass.
 
@@ -173,13 +174,32 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
     stars : `~numpy.ndarray`
         Stellar masses of all the stars.
     """
-
+    
+    #Build CDF, taken from sample_imf above
+    rng = check_random_state(random_state)
+    bin_edges = np.logspace(np.log10(m_min),
+                            np.log10(m_max),
+                            int(num_mass_bins))
+    mass_grid = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+    weights = IMFIntegrator(imf).weights(mass_grid, **imf_kw)
+    dm = np.diff(bin_edges)
+    cdf = np.cumsum(weights * dm)
+    cdf /= cdf.max()
+    cdf = interp1d(cdf, mass_grid, bounds_error=False, fill_value=m_min)
+    
     stars = []
     total_mass = 0.0
     stellar_mass = check_units(stellar_mass, 'Msun').to('Msun').value
-
+    
+    #Ensure the while loop does not get stuck
+    if num_stars_iter < 1: 
+        num_stars_iter = 1
+    
     while total_mass < stellar_mass:
-        new_stars = sample_imf(int(num_stars_iter), **kwargs)
+        
+        rand_num = rng.uniform(low=0., high=1.0, size=int(num_stars_iter))
+        new_stars = cdf(rand_num)
+
         total_mass += new_stars.sum()
         stars = np.concatenate([stars, new_stars])
 
