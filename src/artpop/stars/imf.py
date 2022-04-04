@@ -155,7 +155,8 @@ def sample_imf(num_stars, m_min=0.08, m_max=120, imf='kroupa',
     return masses
 
 
-def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
+def build_galaxy(stellar_mass, num_stars_iter=1e5, m_min=0.08, m_max=120, imf='kroupa',
+    num_mass_bins=100000, random_state=None, imf_kw={}):
     """
     Build galaxy of a given stellar mass.
 
@@ -166,20 +167,60 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, **kwargs):
         solar masses.
     num_stars_iter : int
         Number of stars to generate at each iteration. Lower this
-        number (at the expense of speed) to get a more accurate total mass.
-
+        number (at the expense of speed) to get a more accurate total mass.)
+    num_stars : int
+        Number of stars to sample.
+    m_min : float, optional
+        Minimum stellar mass.
+    m_max : float, optional
+        Maximum stellar mass.
+    imf : str or dict
+        Which IMF to use, if str then must be one of pre-defined: 'kroupa',
+        'scalo' or 'salpeter'. Can also specify broken power law as dict,
+        which must contain either 'a' as a Float (describing the slope of a
+        single power law) or 'a' (a list with 3 elements describing the slopes
+        of a broken power law) and 'b' (a list  with 2 elements describing the
+        locations of the breaks).
+    num_mass_bins : int, optional
+        Number of mass bins in logarithmic spaced mass grid.
+    random_state : `None`, int, list of ints, or `~numpy.random.RandomState`
+        If `None`, return the `~numpy.random.RandomState` singleton used by
+        ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
+        instance seeded with the `int`.  If `~numpy.random.RandomState`,
+        return it. Otherwise raise ``ValueError``.
+    imf_kw : dict, optional
+        Keyword arguments for the imf function.
     Returns
     -------
     stars : `~numpy.ndarray`
         Stellar masses of all the stars.
     """
-
+    
+    #Build CDF, taken from sample_imf above
+    rng = check_random_state(random_state)
+    bin_edges = np.logspace(np.log10(m_min),
+                            np.log10(m_max),
+                            int(num_mass_bins))
+    mass_grid = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+    weights = IMFIntegrator(imf).weights(mass_grid, **imf_kw)
+    dm = np.diff(bin_edges)
+    cdf = np.cumsum(weights * dm)
+    cdf /= cdf.max()
+    cdf = interp1d(cdf, mass_grid, bounds_error=False, fill_value=m_min)
+    
     stars = []
     total_mass = 0.0
     stellar_mass = check_units(stellar_mass, 'Msun').to('Msun').value
-
+    
+    #Ensure the while loop does not get stuck
+    if num_stars_iter < 1: 
+        num_stars_iter = 1
+    
     while total_mass < stellar_mass:
-        new_stars = sample_imf(int(num_stars_iter), **kwargs)
+        
+        rand_num = rng.uniform(low=0., high=1.0, size=int(num_stars_iter))
+        new_stars = cdf(rand_num)
+
         total_mass += new_stars.sum()
         stars = np.concatenate([stars, new_stars])
 
