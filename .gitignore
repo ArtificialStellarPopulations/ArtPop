@@ -104,3 +104,4 @@ ENV/
 *.out
 *.synctex.gz
 sandbox
+.idea

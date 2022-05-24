@@ -1,8 +1,6 @@
 # Third-party
 import numpy as np
-from scipy.integrate import quad
 from scipy.interpolate import interp1d
-from astropy import units as u
 from typing import Iterable
 
 # Project
@@ -196,7 +194,7 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, m_min=0.08, m_max=120, imf='k
         Stellar masses of all the stars.
     """
     
-    #Build CDF, taken from sample_imf above
+    # build CDF, taken from sample_imf above
     rng = check_random_state(random_state)
     bin_edges = np.logspace(np.log10(m_min),
                             np.log10(m_max),
@@ -212,7 +210,7 @@ def build_galaxy(stellar_mass, num_stars_iter=1e5, m_min=0.08, m_max=120, imf='k
     total_mass = 0.0
     stellar_mass = check_units(stellar_mass, 'Msun').to('Msun').value
     
-    #Ensure the while loop does not get stuck
+    # ensure the while loop does not get stuck
     if num_stars_iter < 1: 
         num_stars_iter = 1
     
@@ -260,14 +258,16 @@ class IMFIntegrator(object):
                 self.name = params
             else:
                 raise Exception(
-                        f'{params} is not one of the pre-defined IMFs: ' \
+                        f'{params} is not one of the pre-defined IMFs: '
                         + ', '.join(imf_params_dict.keys())
                     )
 
         elif type(params) == dict:
-            if ('a' in params.keys() and
+            if (
+                'a' in params.keys() and
                 'b' in params.keys() and
-                isinstance(params['a'], Iterable)):
+                isinstance(params['a'], Iterable)
+            ):
                 self.a = params['a']
                 self.b = params['b']
                 self.name = 'custom'
@@ -287,8 +287,8 @@ class IMFIntegrator(object):
         self.num_norm = self.integrate(m_min, m_max, None)
         self.mass_norm = self.m_integrate(m_min, m_max, None)
 
-    def weights(self, mass_grid, norm_type=None,
-        norm_mass_min=None, norm_mass_max=None):
+    def weights(self, mass_grid, norm_type=None, norm_mass_min=None,
+                norm_mass_max=None):
         """
         Calculate the weights of the IMF at grid of stellar masses.
 
@@ -376,7 +376,7 @@ class IMFIntegrator(object):
         a0,a1,a2 = self.a
         b0,b1 = self.b
 
-        #Define constants to normalize functions
+        # define constants to normalize functions
         c0 = b0**a0
         c1 = b0**a1
         c2 = (b1 * (b0 / b1)**(a1 / a2) )**a2
@@ -470,7 +470,7 @@ class IMFIntegrator(object):
             Upper stellar mass bound of integral.
         norm: : Bool or Float
             Whether or not to normalize the integral, default False. If True
-            will normalize by the total stelllar mass. If a Float is given,
+            will normalize by the total stellar mass. If a Float is given,
             then will use that value as the normalization.
 
         Returns

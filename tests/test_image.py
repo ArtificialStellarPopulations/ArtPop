@@ -1,6 +1,4 @@
 # Standard library
-import os
-import pickle
 from unittest import TestCase
 
 # Third-party
@@ -98,4 +96,3 @@ class TestImage(TestCase):
                             pixel_scale=0.2)
         obs = imager.observe(src, 'my_i', exptime=100 * u.s, psf=self.psf)
         self.assertAlmostEqual(100, obs.src_counts.sum())
-

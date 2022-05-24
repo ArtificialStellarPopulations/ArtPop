@@ -1,5 +1,4 @@
 # Standard library
-import os
 import sys
 import abc
 import pickle
@@ -14,11 +13,9 @@ from astropy.convolution import convolve_fft
 from fast_histogram import histogram2d
 
 # Project
-from .. import data_dir
 from ..util import check_units, check_random_state
 from ..filters import FilterSystem, get_filter_names, get_filter_properties
 from ..source import Source
-from ..log import logger
 
 
 __all__ = ['IdealObservation', 'ArtObservation', 'IdealImager', 'ArtImager']

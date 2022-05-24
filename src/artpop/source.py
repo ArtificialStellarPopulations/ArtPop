@@ -12,7 +12,6 @@ from scipy.special import gammaincinv, gamma
 from . import MIST_PATH
 from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
-from .filters import load_zero_point_converter
 from .util import check_units, check_xy_dim
 
 
@@ -278,6 +277,9 @@ class MISTSersicSSP(SersicSP):
         Stellar mass of the source. If `None`, then must give `num_stars`. This
         mass accounts for stellar remnants, so the actual sampled mass will be
         less than the given value.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     add_remnants : bool, optional
         If True (default), apply scaling factor to total mass to account for
         stellar remnants in the form of white dwarfs, neutron stars,
@@ -321,13 +323,13 @@ class MISTSersicSSP(SersicSP):
 
     def __init__(self, log_age, feh, phot_system, r_eff, n, theta, ellip,
                  distance, xy_dim, pixel_scale, num_stars=None,
-                 total_mass=None, add_remnants=True, mag_limit=None,
-                 mag_limit_band=None, imf='kroupa', imf_kw={},
+                 total_mass=None, a_lam=0.0, add_remnants=True, mag_limit=None,
+                 mag_limit_band=None, imf='kroupa', imf_kw=None,
                  mist_path=MIST_PATH, num_r_eff=10, mass_tolerance=0.01,
                  dx=0, dy=0, label_type=None, random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
-                           distance=distance, total_mass=total_mass,
+                           distance=distance, a_lam=a_lam, total_mass=total_mass,
                            num_stars=num_stars, imf=imf, mist_path=mist_path,
                            imf_kw=imf_kw, random_state=random_state,
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
@@ -465,6 +467,9 @@ class MISTPlummerSSP(PlummerSP):
         Stellar mass of the source. If `None`, then must give `num_stars`. This
         mass accounts for stellar remnants, so the actual sampled mass will be
         less than the given value.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     add_remnants : bool, optional
         If True (default), apply scaling factor to total mass to account for
         stellar remnants in the form of white dwarfs, neutron stars,
@@ -504,13 +509,13 @@ class MISTPlummerSSP(PlummerSP):
 
     def __init__(self, log_age, feh, phot_system, scale_radius,
                  distance, xy_dim, pixel_scale, num_stars=None,
-                 total_mass=None, add_remnants=True, mag_limit=None,
-                 mag_limit_band=None, imf='kroupa', imf_kw={},
+                 total_mass=None, a_lam=0.0, add_remnants=True, mag_limit=None,
+                 mag_limit_band=None, imf='kroupa', imf_kw=None,
                  mist_path=MIST_PATH, mass_tolerance=0.01, dx=0, dy=0,
                  label_type=None, random_state=None):
 
         self.ssp_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
-                           distance=distance, total_mass=total_mass,
+                           distance=distance, total_mass=total_mass, a_lam=a_lam,
                            num_stars=num_stars, imf=imf, mist_path=mist_path,
                            imf_kw=imf_kw, random_state=random_state,
                            mag_limit=mag_limit, mag_limit_band=mag_limit_band,
@@ -543,6 +548,9 @@ class UniformSSP(Source):
         Surface brightness of of uniform stellar distribution.
     sb_band : str
         Photometric filter of ``sb``. Must be part of ``phot_system``.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -571,8 +579,8 @@ class UniformSSP(Source):
     """
 
     def __init__(self, isochrone, distance, xy_dim, pixel_scale, sb, sb_band,
-                 mag_limit=None, mag_limit_band=None, imf='kroupa', imf_kw={},
-                 ssp_kw={}, label_type=None, random_state=None):
+                 a_lam=0.0, mag_limit=None, mag_limit_band=None, imf='kroupa',
+                 imf_kw=None, label_type=None, random_state=None):
 
         self.isochrone = isochrone
         self.mag_limit = mag_limit
@@ -586,13 +594,18 @@ class UniformSSP(Source):
         stars_per_pix = constant_sb_stars_per_pix(
             sb, mean_mag, distance, pixel_scale)
 
-        xy_dim  = check_xy_dim(xy_dim)
-        self.ssp_kw = ssp_kw
-        self.ssp_kw['mag_limit'] = mag_limit
-        self.ssp_kw['mag_limit_band'] = mag_limit_band
-        self.ssp_kw['distance'] = distance
-        self.ssp_kw['total_mass'] = None
-        self.ssp_kw['num_stars'] = int(stars_per_pix * np.multiply(*xy_dim))
+        xy_dim = check_xy_dim(xy_dim)
+        self.ssp_kw = {
+            'imf': imf,
+            'a_lam': a_lam,
+            'mag_limit': mag_limit,
+            'mag_limit_band': mag_limit_band,
+            'distance': distance,
+            'total_mass': None,
+            'num_stars': int(stars_per_pix * np.multiply(*xy_dim)),
+            'random_state': random_state,
+            'imf_kw': imf_kw
+        }
 
         if type(isochrone) == MISTIsochrone:
             self.ssp_kw['log_age'] = isochrone.log_age
@@ -673,6 +686,9 @@ class MISTUniformSSP(UniformSSP):
         Surface brightness of of uniform stellar distribution.
     sb_band : str
         Photometric filter of ``sb``. Must be part of ``phot_system``.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -701,9 +717,10 @@ class MISTUniformSSP(UniformSSP):
     """
 
     def __init__(self, log_age, feh, phot_system, distance, xy_dim,
-                 pixel_scale, sb, sb_band, mag_limit=None, mag_limit_band=None,
-                 imf='kroupa', imf_kw={}, ssp_kw={}, mist_path=MIST_PATH,
-                 label_type=None, random_state=None, **kwargs):
+                 pixel_scale, sb, sb_band, a_lam=0.0, mag_limit=None,
+                 mag_limit_band=None, imf='kroupa', imf_kw=None,
+                 mist_path=MIST_PATH, label_type=None, random_state=None,
+                 **kwargs):
 
         self.iso_kw = dict(log_age=log_age, feh=feh, phot_system=phot_system,
                            mist_path=mist_path)
@@ -713,7 +730,7 @@ class MISTUniformSSP(UniformSSP):
 
         super(MISTUniformSSP, self).__init__(
             isochrone=iso, distance=distance, xy_dim=xy_dim, sb=sb,
-            sb_band=sb_band, mag_limit=mag_limit,
+            sb_band=sb_band, a_lam=a_lam, mag_limit=mag_limit,
             mag_limit_band=mag_limit_band, pixel_scale=pixel_scale, imf=imf,
-            imf_kw=imf_kw, ssp_kw=ssp_kw, label_type=label_type,
+            imf_kw=imf_kw, label_type=label_type,
             random_state=random_state)
