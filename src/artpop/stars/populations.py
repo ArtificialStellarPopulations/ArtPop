@@ -29,6 +29,9 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`
         (i.e., the mags are in absolute units).
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     imf : str or dict
         Which IMF to use, if str then must be one of pre-defined: 'kroupa',
         'scalo' or 'salpeter'. Can also specify custom (broken) power law as dict,
@@ -38,10 +41,11 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         locations of the breaks).
     """
 
-    def __init__(self, distance=10.0 * u.pc, imf='kroupa', imf_kw={}):
+    def __init__(self, distance=10.0 * u.pc, a_lam=0.0, imf='kroupa', imf_kw=None):
         self.imf = imf
-        self.imf_kw = imf_kw
+        self.imf_kw = {} if imf_kw is None else imf_kw
         self.distance = check_units(distance, 'Mpc')
+        self._a_lam = a_lam
 
     def build_pop(self, num_stars=None, **kwargs):
         """Build stellar population."""
@@ -81,6 +85,14 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         for filt in self.filters:
             _mags[filt] = self.star_mags(filt)
         return Table(_mags)
+
+    def a_lam(self, bandpass):
+        """Return extinction in given bandpass."""
+        if isinstance(self._a_lam, dict):
+            extinction = self._a_lam[bandpass]
+        else:
+            extinction = self._a_lam
+        return extinction
 
     def to_pickle(self, file_name):
         """Pickle stellar population object."""
@@ -140,7 +152,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         mags : `~numpy.ndarray`
             The stellar apparent magnitudes in the given bandpass.
         """
-        mags = self.abs_mags[bandpass] + self.dist_mod
+        mags = self.abs_mags[bandpass] + self.dist_mod + self.a_lam(bandpass)
         if select is not None:
             mags = mags[select]
         return mags
@@ -162,7 +174,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             The integrated magnitude if it exists. Otherwise None is returned.
         """
         if hasattr(self, 'integrated_abs_mags'):
-            mag = self.integrated_abs_mags[bandpass] + self.dist_mod
+            mag = self.integrated_abs_mags[bandpass] + self.dist_mod + self.a_lam(bandpass)
         else:
             mag = None
         return mag
@@ -309,6 +321,9 @@ class SSP(StellarPopulation):
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -342,10 +357,10 @@ class SSP(StellarPopulation):
     """
 
     def __init__(self, isochrone, num_stars=None, total_mass=None,
-                 distance=10*u.pc, mag_limit=None, mag_limit_band=None,
-                 imf='kroupa', imf_kw={}, mass_tolerance=0.01,
+                 distance=10*u.pc, a_lam=0.0, mag_limit=None, mag_limit_band=None,
+                 imf='kroupa', imf_kw=None, mass_tolerance=0.01,
                  add_remnants=True, random_state=None):
-        super(SSP, self).__init__(distance=distance, imf=imf, imf_kw=imf_kw)
+        super(SSP, self).__init__(distance=distance, a_lam=a_lam, imf=imf, imf_kw=imf_kw)
         self.isochrone = isochrone
         self.filters = isochrone.filters
         self.mag_limit = mag_limit
@@ -672,6 +687,9 @@ class MISTSSP(SSP):
     distance : float or `~astropy.units.Quantity`, optional
         Distance to source. If float is given, the units are assumed
         to be `~astropy.units.Mpc`. Default distance is 10 `~astropy.units.pc`.
+    a_lam : float or dict, optional
+        Magnitude(s) of extinction. If float, the same extinction will be applied
+        to all bands. If dict, the keys must be the same as the observational filters.
     mag_limit : float, optional
         Only sample individual stars that are brighter than this magnitude. All
         fainter stars will be combined into an integrated component. Otherwise,
@@ -711,9 +729,9 @@ class MISTSSP(SSP):
               'EAGB', 'TPAGB', 'postAGB', 'WDCS']
 
     def __init__(self, log_age, feh, phot_system, num_stars=None,
-                 total_mass=None, distance=10*u.pc, mag_limit=None,
+                 total_mass=None, distance=10*u.pc, a_lam=0.0, mag_limit=None,
                  mag_limit_band=None, imf='kroupa', mist_path=MIST_PATH,
-                 imf_kw={}, mass_tolerance=0.05, add_remnants=True,
+                 imf_kw=None, mass_tolerance=0.05, add_remnants=True,
                  random_state=None, **kwargs):
 
         self.feh = feh
@@ -733,6 +751,7 @@ class MISTSSP(SSP):
             imf_kw=imf_kw,
             mass_tolerance=mass_tolerance,
             add_remnants=add_remnants,
+            a_lam=a_lam,
             random_state=random_state
         )
 

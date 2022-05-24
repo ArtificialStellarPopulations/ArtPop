@@ -217,7 +217,7 @@ class Imager(metaclass=abc.ABCMeta):
 class IdealImager(Imager):
     """Ideal imager for making noise-free images."""
 
-    def inject_smooth_model(self, image, source, bandpass, zpt, a_lam):
+    def inject_smooth_model(self, image, source, bandpass, zpt):
         """
         Inject smooth component of the star system into image if it exists.
 
@@ -231,8 +231,6 @@ class IdealImager(Imager):
             Observational bandpass of the mock observation.
         zpt : float
             Photometric zero point.
-        a_lam : float, optional
-            Magnitude of extinction in the observation bandpass.
 
         Returns
         -------
@@ -244,7 +242,7 @@ class IdealImager(Imager):
             if source.smooth_model is None:
                 image = image
             else:
-                mag = source.sp.mag_integrated_component(bandpass) + a_lam
+                mag = source.sp.mag_integrated_component(bandpass)
                 amp, amp_image, name = source.mag_to_image_amplitude(mag, zpt)
                 setattr(source.smooth_model, name, amp_image)
                 yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
@@ -253,7 +251,7 @@ class IdealImager(Imager):
             image = image
         return image
 
-    def observe(self, source, bandpass, psf=None, zpt=27, mask=None, a_lam=0.0, **kwargs):
+    def observe(self, source, bandpass, psf=None, zpt=27, mask=None, **kwargs):
         """
         Make ideal observation.
 
@@ -271,8 +269,6 @@ class IdealImager(Imager):
         mask : `~numpy.ndarray`, optional
             Boolean mask that is set to True for stars you want to inject.
             If None, all stars will be injected.
-        a_lam : float, optional
-            Magnitude of extinction in the observation bandpass.
 
         Returns
         -------
@@ -280,10 +276,10 @@ class IdealImager(Imager):
             Observation object for the ideal imager.
         """
         self._check_source(source)
-        flux = 10**(0.4 * (zpt - source.mags[bandpass] - a_lam))
+        flux = 10**(0.4 * (zpt - source.mags[bandpass]))
         image = self.inject_stars(source.x, source.y, flux,
                                   source.xy_dim, mask)
-        image = self.inject_smooth_model(image, source, bandpass, zpt, a_lam)
+        image = self.inject_smooth_model(image, source, bandpass, zpt)
         image = self.apply_seeing(image, psf, **kwargs)
         observation = IdealObservation(image=image, bandpass=bandpass, zpt=zpt)
         return observation
@@ -504,7 +500,7 @@ class ArtImager(Imager):
             cali_factor /= exptime.to('s').value
         return cali_factor
 
-    def inject_smooth_model(self, image, source, bandpass, exptime, zpt, a_lam):
+    def inject_smooth_model(self, image, source, bandpass, exptime, zpt):
         """
         Inject smooth component of the star system into image if it exists.
 
@@ -521,8 +517,6 @@ class ArtImager(Imager):
             be `~astropy.units.second`.
         zpt : float
             Photometric zero point.
-        a_lam : float, optional
-            Magnitude of extinction in the observation bandpass.
 
         Returns
         -------
@@ -534,7 +528,7 @@ class ArtImager(Imager):
             if source.smooth_model is None:
                 image = image
             else:
-                mag = source.sp.mag_integrated_component(bandpass) + a_lam
+                mag = source.sp.mag_integrated_component(bandpass)
                 amp, _, name = source.mag_to_image_amplitude(mag, zpt)
                 amp_counts = self.sb_to_counts_per_pixel(
                     amp, bandpass, exptime, source.pixel_scale)
@@ -546,7 +540,7 @@ class ArtImager(Imager):
         return image
 
     def observe(self, source, bandpass, exptime, sky_sb=None, psf=None,
-                zpt=27.0, mask=None, a_lam=0.0, **kwargs):
+                zpt=27.0, mask=None, **kwargs):
         """
         Make artificial observation.
 
@@ -570,8 +564,6 @@ class ArtImager(Imager):
         mask : `~numpy.ndarray`, optional
             Boolean mask that is set to True for stars you want to inject.
             If None, all stars will be injected.
-        a_lam : float, optional
-            Magnitude of extinction in the observation bandpass.
 
         Returns
         -------
@@ -581,11 +573,11 @@ class ArtImager(Imager):
         self._check_bandpass(bandpass)
         self._check_source(source)
         exptime = check_units(exptime, 's')
-        counts = self.mag_to_counts(source.mags[bandpass] + a_lam, bandpass, exptime)
+        counts = self.mag_to_counts(source.mags[bandpass], bandpass, exptime)
         src_counts = self.inject_stars(source.x, source.y,
                                        counts, source.xy_dim, mask)
         src_counts = self.inject_smooth_model(src_counts, source,
-                                              bandpass, exptime, zpt, a_lam)
+                                              bandpass, exptime, zpt)
         src_counts = self.apply_seeing(src_counts, psf, **kwargs)
         if sky_sb is not None:
             sky_counts = self.sb_to_counts_per_pixel(

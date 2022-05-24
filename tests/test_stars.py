@@ -4,7 +4,6 @@ import pickle
 from unittest import TestCase
 
 # Third-party
-import numpy as np
 from astropy.table import Table
 
 # Project
@@ -50,7 +49,7 @@ class TestStars(TestCase):
         self.assertEqual(0.1, self.iso.m_min)
         self.assertEqual(self.filters, self.iso.filters)
 
-    def test_isochrone_calculaions(self):
+    def test_isochrone_calculations(self):
         """Test isochrone calculations of SSP integrated parameters."""
         self.assertAlmostEqual(4.7117543, self.iso.ssp_mag('LSST_i'))
         self.assertAlmostEqual(-1.4292711, self.iso.ssp_sbf_mag('LSST_i'))
@@ -72,3 +71,21 @@ class TestStars(TestCase):
         self.assertEqual(200000, csp.num_stars)
         self.assertEqual(ssp.total_mass + ssp_2.total_mass, csp.total_mass)
         self.assertAlmostEqual(5.9007906, csp.mean_mag('LSST_z'))
+
+    def test_add_extinction(self):
+        """Test that extinction is applied to SSPs correctly."""
+        ssp_no_ext = SSP(self.iso, num_stars=1e6, random_state=1)
+        ssp_with_ext = SSP(self.iso, num_stars=1e6, random_state=1, a_lam=1.0)
+
+        m_no_ext = ssp_no_ext.total_mag('LSST_i')
+        m_with_ext = ssp_with_ext.total_mag('LSST_i')
+        self.assertAlmostEqual(1.0, m_with_ext - m_no_ext)
+
+        ssp_with_ext = SSP(self.iso, num_stars=1e6, random_state=1, a_lam=dict(LSST_i=2.0, LSST_g=1.0))
+
+        m_with_ext = ssp_with_ext.total_mag('LSST_i')
+        self.assertAlmostEqual(2.0, m_with_ext - m_no_ext)
+
+        m_no_ext_g = ssp_no_ext.total_mag('LSST_g')
+        m_with_ext_g = ssp_with_ext.total_mag('LSST_g')
+        self.assertAlmostEqual(1.0, m_with_ext_g - m_no_ext_g)
