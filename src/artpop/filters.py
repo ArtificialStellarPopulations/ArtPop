@@ -1,7 +1,6 @@
 # Standard library
 import os
 import pickle
-from glob import glob
 
 # Third-party
 import numpy as np

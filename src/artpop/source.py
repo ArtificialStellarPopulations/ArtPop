@@ -12,7 +12,6 @@ from scipy.special import gammaincinv, gamma
 from . import MIST_PATH
 from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
-from .filters import load_zero_point_converter
 from .util import check_units, check_xy_dim
 
 

@@ -4,23 +4,23 @@ import os
 # Third-party
 import numpy as np
 from numpy.lib.recfunctions import append_fields
-from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from astropy.table import Table
 from astropy import units as u
 
 # Project
-from ._read_mist_models import IsoCmdReader, IsoReader
+from ._read_mist_models import IsoCmdReader
 from .imf import IMFIntegrator
 from .. import MIST_PATH
 from ..log import logger
 from ..filters import phot_system_list, get_filter_names
 from ..filters import load_zero_point_converter
 from ..util import check_units, fetch_mist_grid_if_needed
-phot_str_helper = {p.lower():p for p in phot_system_list}
 
 
 __all__ = ['fetch_mist_iso_cmd', 'Isochrone', 'MISTIsochrone']
+
+phot_str_helper = {p.lower(): p for p in phot_system_list}
 
 
 class Isochrone(object):

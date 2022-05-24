@@ -5,8 +5,6 @@ import numpy as np
 from copy import deepcopy
 
 # Third-party
-from scipy.integrate import quad
-from scipy.interpolate import interp1d
 from astropy.table import Table
 from astropy import units as u
 
@@ -14,7 +12,6 @@ from astropy import units as u
 from .. import MIST_PATH
 from ..util import check_random_state, check_units
 from ..log import logger
-from ..filters import *
 from .imf import sample_imf, build_galaxy, IMFIntegrator
 from .isochrones import MISTIsochrone
 

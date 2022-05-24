@@ -1,6 +1,4 @@
 # Standard library
-import os
-import pickle
 from unittest import TestCase
 
 # Third-party
@@ -99,3 +97,16 @@ class TestImage(TestCase):
         obs = imager.observe(src, 'my_i', exptime=100 * u.s, psf=self.psf)
         self.assertAlmostEqual(100, obs.src_counts.sum())
 
+    def test_add_extinction(self):
+        """Test that extinction is correctly applied in the observe methods."""
+        imager = artpop.IdealImager()
+        obs_no_ext = imager.observe(self.src, 'LSST_i', a_lam=0.0)
+        obs_with_ext = imager.observe(self.src, 'LSST_i', a_lam=1.0)
+        dm = 2.5 * np.log10(obs_no_ext.image.sum()) - 2.5 * np.log10(obs_with_ext.image.sum())
+        self.assertEqual(1.0, dm)
+
+        imager = artpop.ArtImager('LSST', random_state=1333)
+        obs_no_ext = imager.observe(self.src, 'LSST_i', 10000 * u.hr, a_lam=0.0)
+        obs_with_ext = imager.observe(self.src, 'LSST_i', 10000 * u.hr, a_lam=1.0)
+        dm = 2.5 * np.log10(obs_no_ext.image.sum()) - 2.5 * np.log10(obs_with_ext.image.sum())
+        self.assertAlmostEqual(1.0, dm)
