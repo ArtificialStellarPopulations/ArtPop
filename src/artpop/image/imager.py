@@ -290,7 +290,7 @@ class ArtImager(Imager):
     Imager for making fully artificial images.
 
     .. note::
-        If you use a phot_system and its pre-calculated filter properties, the
+        If you use a `phot_system` and its pre-calculated filter properties, the
         conversion from magnitude to counts assumes AB magnitudes.
 
     Parameters
