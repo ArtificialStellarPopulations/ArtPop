@@ -215,7 +215,14 @@ class Imager(metaclass=abc.ABCMeta):
 
 
 class IdealImager(Imager):
-    """Ideal imager for making noise-free images."""
+    """
+    Ideal imager for making noise-free images.
+
+    .. note::
+        Stars are injected in the center of pixels even if subpixel coordinates
+        are given. If you need subpixel precision, we recommend creating
+        upsampled mock images and downsampling to the desired resolution.
+    """
 
     def inject_smooth_model(self, image, source, bandpass, zpt):
         """
@@ -288,6 +295,11 @@ class IdealImager(Imager):
 class ArtImager(Imager):
     """
     Imager for making fully artificial images.
+
+    .. note::
+        Stars are injected in the center of pixels even if subpixel coordinates
+        are given. If you need subpixel precision, we recommend creating
+        upsampled mock images and downsampling to the desired resolution.
 
     .. note::
         If you use a phot_system and its pre-calculated filter properties, the
