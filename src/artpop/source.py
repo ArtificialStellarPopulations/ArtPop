@@ -10,6 +10,7 @@ from scipy.special import gammaincinv, gamma
 
 # Project
 from . import MIST_PATH
+from .log import logger
 from .stars import SSP, MISTSSP, MISTIsochrone, constant_sb_stars_per_pix
 from .space import sersic_xy, plummer_xy, uniform_xy, Plummer2D, Constant2D
 from .util import check_units, check_xy_dim
@@ -94,6 +95,15 @@ class Source(object):
         if Source not in src.__class__.__mro__:
             raise Exception(f'{type(src)} is not a valid Source object')
         new = deepcopy(self)
+        for s in [new, src]:
+            if hasattr(s, 'sp') and s.sp.mag_limit is not None:
+                logger.warning(
+                    'Composite source objects currently only support '
+                    'discrete components.\nIf you want to include smooth '
+                    'components (i.e., mag_limit is not None),\n'
+                    'add the individual source images together.'
+                )
+                break
         if not np.allclose(new.xy_dim, src.xy_dim):
             raise Exception('Sources must have the same xy_dim')
         if new.labels is None:

@@ -74,7 +74,7 @@ class TestImage(TestCase):
         obs = imager.observe(self.src, 'LSST_i', exptime=1*u.min, sky_sb=19)
         self.assertEqual((201, 201), obs.image.shape)
         self.assertGreater(
-            0.02, abs(100 * (38869053 -  obs.image.sum()) / obs.image.sum()))
+            0.02, abs(100 * (38869053 - obs.image.sum()) / obs.image.sum()))
         self.assertGreater(
             0.03, abs(100 * (962 - obs.image.mean()) / obs.image.mean()))
 
