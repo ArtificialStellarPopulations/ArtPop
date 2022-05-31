@@ -19,8 +19,8 @@ class TestStars(TestCase):
         """Build single isochrone object for all test cases."""
         with open(iso_fn, 'rb') as f:
             iso_table = Table(pickle.load(f))
-        self.filters =['LSST_u', 'LSST_g', 'LSST_r',
-                       'LSST_i', 'LSST_z', 'LSST_y']
+        self.filters = ['LSST_u', 'LSST_g', 'LSST_r',
+                        'LSST_i', 'LSST_z', 'LSST_y']
         self.iso = Isochrone(
             mini=iso_table['initial_mass'],
             mact=iso_table['star_mass'],
@@ -63,9 +63,9 @@ class TestStars(TestCase):
     def test_ssp(self):
         """Test SSP objects."""
         ssp = SSP(self.iso, num_stars=1e5, random_state=1)
-        self.assertAlmostEqual(42503.7698205, ssp.total_mass.value,3)
+        self.assertAlmostEqual(42503.7698205, ssp.total_mass.value, 3)
         self.assertAlmostEqual(
-            30038.3808821, ssp.total_initial_live_mass.value,3)
+            30038.3808821, ssp.total_initial_live_mass.value, 3)
         ssp_2 = SSP(self.iso, num_stars=1e5, random_state=11)
         csp = ssp + ssp_2
         self.assertEqual(200000, csp.num_stars)
@@ -75,13 +75,18 @@ class TestStars(TestCase):
     def test_add_extinction(self):
         """Test that extinction is applied to SSPs correctly."""
         ssp_no_ext = SSP(self.iso, num_stars=1e6, random_state=1)
+
         ssp_with_ext = SSP(self.iso, num_stars=1e6, random_state=1, a_lam=1.0)
+        self.assertDictEqual(ssp_with_ext.a_lam, {f'LSST_{f}': 1.0 for f in 'ugrizy'})
 
         m_no_ext = ssp_no_ext.total_mag('LSST_i')
         m_with_ext = ssp_with_ext.total_mag('LSST_i')
         self.assertAlmostEqual(1.0, m_with_ext - m_no_ext)
 
-        ssp_with_ext = SSP(self.iso, num_stars=1e6, random_state=1, a_lam=dict(LSST_i=2.0, LSST_g=1.0))
+        a_lam = dict(LSST_i=2.0, LSST_g=1.0)
+        ssp_with_ext = SSP(self.iso, num_stars=1e6, random_state=1, a_lam=a_lam.copy())
+        a_lam.update({f'LSST_{f}': 0.0 for f in 'urzy'})
+        self.assertDictEqual(ssp_with_ext.a_lam, a_lam)
 
         m_with_ext = ssp_with_ext.total_mag('LSST_i')
         self.assertAlmostEqual(2.0, m_with_ext - m_no_ext)

@@ -302,7 +302,7 @@ class ArtImager(Imager):
         upsampled mock images and downsampling to the desired resolution.
 
     .. note::
-        If you use a phot_system and its pre-calculated filter properties, the
+        If you use a `phot_system` and its pre-calculated filter properties, the
         conversion from magnitude to counts assumes AB magnitudes.
 
     Parameters
