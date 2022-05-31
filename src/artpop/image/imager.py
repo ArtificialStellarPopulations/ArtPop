@@ -205,7 +205,7 @@ class Imager(metaclass=abc.ABCMeta):
                                  normalize_kernel=True)
         return image
 
-    def inject_smooth_model(self, bimage, source, bandpass, zpt):
+    def inject_smooth_model(self, image, source, bandpass, zpt):
         """Inject smooth model if it exists."""
         return NotImplementedError()
 
