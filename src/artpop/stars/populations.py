@@ -45,7 +45,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         self.imf = imf
         self.imf_kw = {} if imf_kw is None else imf_kw
         self.distance = check_units(distance, 'Mpc')
-        self._a_lam = a_lam
+        self.a_lam = a_lam
 
     def build_pop(self, num_stars=None, **kwargs):
         """Build stellar population."""
@@ -86,13 +86,36 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             _mags[filt] = self.star_mags(filt)
         return Table(_mags)
 
-    def a_lam(self, bandpass):
-        """Return extinction in given bandpass."""
-        if isinstance(self._a_lam, dict):
-            extinction = self._a_lam[bandpass]
+    @property
+    def a_lam(self):
+        """Return extinction dictionary."""
+        return self._a_lam
+
+    @a_lam.setter
+    def a_lam(self, a_lam):
+        """
+        Set the extinction magnitude dictionary. Warn user if the
+        given a_lam filter is not in the filter set.
+
+        Parameters
+        ----------
+        a_lam : float or dict, optional
+            Magnitude(s) of extinction. If float, the same extinction will
+            be applied to all bands. If dict, the keys must be the same as
+            the observational filters.
+        """
+        if isinstance(a_lam, dict):
+            self._a_lam = {filt: 0.0 for filt in self.filters}
+            for filt in a_lam.keys():
+                if filt in self.filters:
+                    self._a_lam[filt] = a_lam[filt]
+                else:
+                    logger.warning(
+                        f'{filt} not in filter set. '
+                        f'Will ignore a_lam for this filter.'
+                    )
         else:
-            extinction = self._a_lam
-        return extinction
+            self._a_lam = {filt: a_lam for filt in self.filters}
 
     def to_pickle(self, file_name):
         """Pickle stellar population object."""
@@ -152,7 +175,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
         mags : `~numpy.ndarray`
             The stellar apparent magnitudes in the given bandpass.
         """
-        mags = self.abs_mags[bandpass] + self.dist_mod + self.a_lam(bandpass)
+        mags = self.abs_mags[bandpass] + self.dist_mod + self.a_lam[bandpass]
         if select is not None:
             mags = mags[select]
         return mags
@@ -174,7 +197,7 @@ class StellarPopulation(metaclass=abc.ABCMeta):
             The integrated magnitude if it exists. Otherwise None is returned.
         """
         if hasattr(self, 'integrated_abs_mags'):
-            mag = self.integrated_abs_mags[bandpass] + self.dist_mod + self.a_lam(bandpass)
+            mag = self.integrated_abs_mags[bandpass] + self.dist_mod + self.a_lam[bandpass]
         else:
             mag = None
         return mag
@@ -360,9 +383,9 @@ class SSP(StellarPopulation):
                  distance=10*u.pc, a_lam=0.0, mag_limit=None, mag_limit_band=None,
                  imf='kroupa', imf_kw=None, mass_tolerance=0.01,
                  add_remnants=True, random_state=None):
-        super(SSP, self).__init__(distance=distance, a_lam=a_lam, imf=imf, imf_kw=imf_kw)
         self.isochrone = isochrone
         self.filters = isochrone.filters
+        super(SSP, self).__init__(distance=distance, a_lam=a_lam, imf=imf, imf_kw=imf_kw)
         self.mag_limit = mag_limit
         self.mag_limit_band = mag_limit_band
         self.rng = check_random_state(random_state)
@@ -574,6 +597,19 @@ class SSP(StellarPopulation):
         assert self.filters == ssp.filters, 'must have same filters'
         assert self.distance == ssp.distance, 'SSPs must have same distance'
         new = deepcopy(self)
+
+        if (
+            any([v != 0.0 for v in new.a_lam.values()]) or
+            any([v != 0.0 for v in ssp.a_lam.values()])
+        ):
+            logger.warning(
+                'Extinction is currently not supported for composite '
+                'populations. All a_lam will be set to zero.'
+            )
+            # No need to set the ssp.a_lam values to zero.
+            for filt in new.filters:
+                new.a_lam[filt] = 0.0
+
         if type(new.isochrone) != list:
             new.isochrone = [new.isochrone]
         if type(ssp.isochrone) != list:
@@ -617,7 +653,7 @@ class SSP(StellarPopulation):
             new.ssp_mass_fracs.append(m / new.total_mass)
 
         # Loop over optional attributes.
-        # Both SSPs must have the arrtibute to add them.
+        # Both SSPs must have the attribute to add them.
         for attr in ['eep', 'log_L', 'log_Teff']:
             if hasattr(new, attr) and hasattr(ssp, attr):
                 new_attr = getattr(new, attr)
@@ -650,7 +686,7 @@ class SSP(StellarPopulation):
                 log_lumlum = np.log10(new_lumlum + ssp_lumlum)
                 new._integrated_log_lumlum[filt] = log_lumlum
             elif ssp.has_integrated_component:
-                new.integrated_abs_magw[filt] = ssp.integrated_abs_mags[filt]
+                new.integrated_abs_mags[filt] = ssp.integrated_abs_mags[filt]
                 log_lumlum =  ssp._integrated_log_lumlum[filt]
                 new._integrated_log_lumlum[filt] = log_lumlum
 
