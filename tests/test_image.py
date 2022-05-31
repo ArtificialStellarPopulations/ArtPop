@@ -17,10 +17,10 @@ class TestImage(TestCase):
         self.psf = artpop.moffat_psf(0.6, pixel_scale=0.2)
         self.src = artpop.Source(
             xy=np.array([[109.5,  71.7],
-                         [ 36.6, 111.7],
-                         [ 40.3, 107.7],
+                         [36.6, 111.7],
+                         [40.3, 107.7],
                          [166.7, 199.4],
-                         [ 86.8, 160.9]]),
+                         [86.8, 160.9]]),
             mags=dict(LSST_i=np.array([10.1, 20.4, 30.2, 20.5, 8.2])),
             xy_dim=201,
             pixel_scale=0.2
