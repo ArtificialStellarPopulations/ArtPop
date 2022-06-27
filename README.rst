@@ -3,7 +3,9 @@ ArtPop
 ======
 .. image:: ./docs/artpop_diagram.jpg
 
-|CI| |pypi| |arXiv|
+|CI| |pypi| |arXiv| |zenodo|
+
+
 
 An engine for generating realistic mock images of **Art**\ ificial Stellar **Pop**\ ulations.
 
@@ -30,3 +32,5 @@ License
    :target: https://badge.fury.io/py/artpop
 .. |arXiv| image:: https://img.shields.io/badge/arXiv-2109.13943-blue
    :target: https://arxiv.org/abs/2109.13943
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.6755153.svg
+   :target: https://doi.org/10.5281/zenodo.6755153
