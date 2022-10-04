@@ -220,7 +220,7 @@ def fetch_mist_grid_if_needed(phot_system, v_over_vcrit=0.4,
                     if not is_within_directory(path, member_path):
                         raise Exception("Attempted Path Traversal in Tar File")
             
-                tar.extractall(path, members, numeric_owner) 
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
                 
             
             safe_extract(tar, mist_path)
