@@ -630,7 +630,7 @@ class MISTIsochrone(Isochrone):
             logger.debug('Using nearest log_age = {:.2f}'.format(self.log_age))
 
         # store phot_system as list to allow multiple photometric systems
-        if type(phot_system) == str:
+        if isinstance(phot_system, str):
             phot_system = [phot_system]
 
         # fetch first isochrone grid, interpolating on [Fe/H] if necessary

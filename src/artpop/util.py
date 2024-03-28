@@ -51,7 +51,7 @@ def check_random_state(seed):
         return np.random.mtrand._rand
     if isinstance(seed, (numbers.Integral, np.integer)):
         return np.random.RandomState(seed)
-    if isinstance(seed, np.random.RandomState):
+    if isinstance(seed, np.random.RandomState) or isinstance(np.random.Generator):
         return seed
     if type(seed)==list:
         if type(seed[0])==int:
