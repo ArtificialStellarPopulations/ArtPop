@@ -526,7 +526,7 @@ class Isochrone(object):
 
 
 def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
-                       v_over_vcrit=0.4):
+                       v_over_vcrit=0.4, ab_or_vega=None):
     """
     Fetch MIST isochrone grid.
 
@@ -544,6 +544,16 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
     v_over_vcrit : float, optional
         Rotation rate divided by the critical surface linear velocity. Current
         options are 0.4 (default) and 0.0.
+    ab_or_vega : str, optional
+        Convert the returned magnitudes to the AB or Vega magnitude system.
+        If `None` (default), the magnitudes are returned exactly as provided
+        by MIST, with no conversion applied. Note that MIST's native system
+        is *not* the same for all photometric systems (e.g. it is Vega for
+        HST filters), so magnitudes returned with `ab_or_vega=None` are
+        **not** directly comparable to `~artpop.stars.MISTSSP`/
+        `~artpop.stars.MISTIsochrone` magnitudes, which default to AB. Pass
+        ``ab_or_vega='ab'`` here to get magnitudes in the same system as the
+        `MISTSSP`/`MISTIsochrone` default.
 
     Returns
     -------
@@ -563,6 +573,18 @@ def fetch_mist_iso_cmd(log_age, feh, phot_system, mist_path=MIST_PATH,
     fn = os.path.join(path, fn)
     iso_cmd = IsoCmdReader(fn, verbose=False)
     iso_cmd = iso_cmd.isocmds[iso_cmd.age_index(log_age)]
+
+    if ab_or_vega is not None:
+        zpt_convert = load_zero_point_converter()
+        converter = getattr(zpt_convert, f'to_{ab_or_vega.lower()}')
+        for filt in get_filter_names(phot_system):
+            try:
+                m_convert = converter(filt)
+            except AttributeError:
+                m_convert = 0.0
+                logger.warning(f'No AB / Vega conversion found for {filt}.')
+            iso_cmd[filt] = iso_cmd[filt] + m_convert
+
     return iso_cmd
 
 
