@@ -744,6 +744,13 @@ class MISTSSP(SSP):
     mist_path : str, optional
         Path to MIST isochrone grids. Use this if you want to use a different
         path from the `MIST_PATH` environment variable.
+    ab_or_vega : str, optional
+        Magnitudes will be in the AB (default) or Vega magnitude system. Note
+        that MIST's *native* system is not AB for every photometric system
+        (e.g. it is Vega for the HST filters), so if you are comparing to a
+        raw MIST isochrone (e.g. from `~artpop.stars.fetch_mist_iso_cmd`) or
+        to real photometry calibrated in the natural (VEGAMAG) system, pass
+        ``ab_or_vega='vega'`` here to match it.
     imf_kw : dict, optional
         Optional keyword arguments for sampling the stellar mass function.
     mass_tolerance : float, optional
@@ -767,14 +774,15 @@ class MISTSSP(SSP):
     def __init__(self, log_age, feh, phot_system, num_stars=None,
                  total_mass=None, distance=10*u.pc, a_lam=0.0, mag_limit=None,
                  mag_limit_band=None, imf='kroupa', mist_path=MIST_PATH,
-                 imf_kw=None, mass_tolerance=0.05, add_remnants=True,
-                 random_state=None, **kwargs):
+                 ab_or_vega='ab', imf_kw=None, mass_tolerance=0.05,
+                 add_remnants=True, random_state=None, **kwargs):
 
         self.feh = feh
         self.log_age = log_age
         self.phot_system = phot_system
         self.mist_path = mist_path
-        _iso = MISTIsochrone(log_age, feh, phot_system,  mist_path, **kwargs)
+        _iso = MISTIsochrone(log_age, feh, phot_system, mist_path,
+                              ab_or_vega=ab_or_vega, **kwargs)
 
         super(MISTSSP, self).__init__(
             isochrone=_iso,
