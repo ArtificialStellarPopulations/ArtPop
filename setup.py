@@ -34,6 +34,7 @@ setup(
     version=version,
     description='Building artificial galaxies one star at a time',
     long_description=readme(),
+    long_description_content_type='text/x-rst',
     author='Johnny Greco & Shany Danieli',
     author_email='artpopcode@gmail.com',
     packages=find_packages(where="src"),
