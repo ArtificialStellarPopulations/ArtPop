@@ -105,3 +105,6 @@ ENV/
 *.synctex.gz
 sandbox
 .idea
+
+# Local package publishing credentials
+.pypirc
