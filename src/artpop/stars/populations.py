@@ -759,6 +759,13 @@ class MISTSSP(SSP):
         ``numpy.random``. If `int`, return a new `~numpy.random.RandomState`
         instance seeded with the `int`.  If `~numpy.random.RandomState`,
         return it. Otherwise raise ``ValueError``.
+    ab_or_vega : str, optional
+        Magnitudes will be in the AB (default) or Vega magnitude system. Note
+        that MIST's *native* system is not AB for every photometric system
+        (e.g. it is Vega for the HST filters), so if you are comparing to a
+        raw MIST isochrone (e.g. from `~artpop.stars.fetch_mist_iso_cmd`) or
+        to real photometry calibrated in the natural (VEGAMAG) system, pass
+        ``ab_or_vega='vega'`` here to match it.
     """
 
     phases = ['PMS', 'MS', 'giants', 'RGB', 'CHeB', 'AGB',
@@ -768,13 +775,14 @@ class MISTSSP(SSP):
                  total_mass=None, distance=10*u.pc, a_lam=0.0, mag_limit=None,
                  mag_limit_band=None, imf='kroupa', mist_path=MIST_PATH,
                  imf_kw=None, mass_tolerance=0.05, add_remnants=True,
-                 random_state=None, **kwargs):
+                 random_state=None, ab_or_vega='ab', **kwargs):
 
         self.feh = feh
         self.log_age = log_age
         self.phot_system = phot_system
         self.mist_path = mist_path
-        _iso = MISTIsochrone(log_age, feh, phot_system,  mist_path, **kwargs)
+        _iso = MISTIsochrone(log_age, feh, phot_system, mist_path,
+                              ab_or_vega=ab_or_vega, **kwargs)
 
         super(MISTSSP, self).__init__(
             isochrone=_iso,
