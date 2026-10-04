@@ -3,6 +3,7 @@ from unittest import TestCase
 
 # Third-party
 import numpy as np
+from astropy import units as u
 
 # Project
 from artpop.stars import MISTIsochrone, MISTSSP
@@ -40,3 +41,15 @@ class TestMIST(TestCase):
         giants += self.ssp.select_phase('CHeB').sum()
         self.assertEqual(giants, self.ssp.select_phase('giants').sum())
 
+    def test_mist_ssp_positional_arguments(self):
+        """Preserve positional arguments when selecting a magnitude system."""
+        args = (10.1, -1, 'LSST', 1e4, None, 10*u.pc, 0.0, None, None,
+                'kroupa', self.ssp.mist_path, {}, 0.05, True, 1234)
+        ssp = MISTSSP(*args)
+        np.testing.assert_array_equal(
+            ssp.mag_table.as_array(), self.ssp.mag_table.as_array())
+        self.assertEqual(ssp.total_mass, self.ssp.total_mass)
+
+        vega = MISTSSP(*args, ab_or_vega='vega')
+        np.testing.assert_allclose(
+            ssp.mag_table['LSST_i'] - vega.mag_table['LSST_i'], 0.363627)
